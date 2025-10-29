@@ -1,0 +1,5 @@
+{
+  "name": "Doodle Digest",
+  "description": "An AI-powered tool that transforms dense research papers into simple, visually engaging doodle-style summaries. Upload a PDF, and our app will extract the key information, simplify the language, and present it alongside a faded, transparent view of the original document.",
+  "requestFramePermissions": []
+}
