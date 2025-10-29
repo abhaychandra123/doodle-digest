@@ -15,11 +15,10 @@ import Group from './models/Group'; // Import the Group model
 
 // --- Define Interfaces for Request Bodies/Mongoose Docs (Fixes TS2749) ---
 // Interface representing the structure of user data (excluding password)
+// Removed explicit createdAt/updatedAt - Omit handles them correctly based on schema inference
 interface IUserPublic extends Omit<mongoose.InferSchemaType<typeof User.schema>, 'password'> {
   _id: mongoose.Types.ObjectId; // Add _id if needed
   id?: string; // Mongoose might add 'id' virtual
-  createdAt?: Date; // Add timestamps if needed from schema
-  updatedAt?: Date;
 }
 
 // Interface for the expected request body when creating a group
@@ -106,19 +105,23 @@ app.post('/api/auth/register', async (req: Request, res: Response) => { // Use R
         const token = jwt.sign({ id: savedUser.id }, process.env.JWT_SECRET!, { expiresIn: '3h' });
 
         // Create a user object to return, explicitly excluding the password
+        // Use .toObject() to get a plain JS object from Mongoose doc
+        const userObject = savedUser.toObject();
+        // Construct the response object safely, omitting password
         const userResponse: IUserPublic = {
-            _id: savedUser._id,
-            email: savedUser.email,
-            fullName: savedUser.fullName,
-            status: savedUser.status,
-            role: savedUser.role,
-            badges: savedUser.badges,
-            skills: savedUser.skills,
-            stats: savedUser.stats,
-            integrations: savedUser.integrations,
-            createdAt: savedUser.createdAt,
-            updatedAt: savedUser.updatedAt,
+             _id: userObject._id,
+             email: userObject.email,
+             fullName: userObject.fullName,
+             status: userObject.status,
+             role: userObject.role,
+             badges: userObject.badges,
+             skills: userObject.skills,
+             stats: userObject.stats,
+             integrations: userObject.integrations,
+             createdAt: userObject.createdAt, // Timestamps are included
+             updatedAt: userObject.updatedAt,
         };
+
 
         res.status(201).json({ token, user: userResponse });
     } catch (error) {
@@ -144,18 +147,19 @@ app.post('/api/auth/login', async (req: Request, res: Response) => { // Use Requ
         const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET!, { expiresIn: '3h' });
 
         // Create a user object to return, explicitly excluding the password
-         const userResponse: IUserPublic = {
-            _id: user._id,
-            email: user.email,
-            fullName: user.fullName,
-            status: user.status,
-            role: user.role,
-            badges: user.badges,
-            skills: user.skills,
-            stats: user.stats,
-            integrations: user.integrations,
-            createdAt: user.createdAt,
-            updatedAt: user.updatedAt,
+        const userObject = user.toObject();
+        const userResponse: IUserPublic = {
+             _id: userObject._id,
+             email: userObject.email,
+             fullName: userObject.fullName,
+             status: userObject.status,
+             role: userObject.role,
+             badges: userObject.badges,
+             skills: userObject.skills,
+             stats: userObject.stats,
+             integrations: userObject.integrations,
+             createdAt: userObject.createdAt,
+             updatedAt: userObject.updatedAt,
         };
 
         res.json({ token, user: userResponse });
