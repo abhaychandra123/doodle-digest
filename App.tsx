@@ -1,16 +1,12 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import 'react/jsx-runtime';
-import { AppView, SummarizerView, User, Document, PdfPage, WritingDocument, Task, GroupDraft } from './types'; // Ensure Task and GroupDraft are in types.ts
-import { processPdf } from './services/pdfService';
-import { processImage } from './services/imageService';
+import { AppView, SummarizerView, User, Document, WritingDocument, Task, GroupDraft, Activity, AppStats } from './types';
+// --- NEW: Import the refactored services ---
 import {
-    generateDoodleSummary,
-    generateNotebookSummary,
-    generateTotalSummary,
-    generateMiniExercise,
+    processFileOnBackend,
     generateCreatorStory,
-    suggestImprovements // Keep AI suggestions on frontend for now
-} from './services/geminiService';
+    suggestImprovements
+} from './services/aiService';
 import FileUploadView from './components/FileUploadView';
 import ProcessingView from './components/ProcessingView';
 import ResultsView from './components/ResultsView';
@@ -27,22 +23,23 @@ import MemoryView from './components/MemoryView';
 import StoryfyView from './components/StoryfyView';
 import WritingWizardView from './components/WritingWizardView';
 
-// --- BACKEND INTEGRATION ---
-// Define the base URL for your backend API
-const API_URL = 'http://localhost:5000/api'; // Make sure this matches your backend port
+// --- NEW: Get API URL from Vite environment ---
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 const App: React.FC = () => {
   // Main application state
   const [view, setView] = useState<AppView>(AppView.LOGIN);
   const [summarizerView, setSummarizerView] = useState<SummarizerView>(SummarizerView.UPLOAD);
 
-  // Data state - Initialized empty, will be fetched from backend
+  // Data state
   const [documents, setDocuments] = useState<Document[]>([]);
   const [activeDocument, setActiveDocument] = useState<Document | null>(null);
   const [scrollTarget, setScrollTarget] = useState<{ docId: string; pageNumber: number } | null>(null);
   const [writingDocuments, setWritingDocuments] = useState<WritingDocument[]>([]);
   const [activeWritingDocumentId, setActiveWritingDocumentId] = useState<string | null>(null);
-  const [tasks, setTasks] = useState<Task[]>([]); // Added tasks state
+  const [tasks, setTasks] = useState<Task[]>([]); 
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [stats, setStats] = useState<AppStats | null>(null);
 
   // Processing state
   const [error, setError] = useState<string>('');
@@ -54,67 +51,65 @@ const App: React.FC = () => {
 
   // Auth State
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  // Simplified reset state, backend handles OTP logic
   const [passwordResetEmail, setPasswordResetEmail] = useState<string | null>(null);
 
-  // --- BACKEND INTEGRATION ---
   // Helper to get auth token
   const getAuthToken = useCallback(() => localStorage.getItem('token'), []);
 
-  // --- BACKEND INTEGRATION ---
   // Fetch initial data on app load if token exists
   useEffect(() => {
     const token = getAuthToken();
     if (token) {
       const fetchInitialData = async () => {
         try {
-          // 1. Fetch User Data
           const userRes = await fetch(`${API_URL}/auth/user`, {
             headers: { 'x-auth-token': token }
           });
           if (!userRes.ok) throw new Error('Invalid token');
           const userData = await userRes.json();
           setCurrentUser(userData);
-          setView(AppView.DASHBOARD); // Go to dashboard if logged in
+          setView(AppView.DASHBOARD); 
 
-          // Fetch other data concurrently
           await Promise.all([
-            // 2. Fetch Documents
             fetch(`${API_URL}/documents`, { headers: { 'x-auth-token': token } })
               .then(res => res.ok ? res.json() : [])
               .then(docsData => setDocuments(docsData)),
-            // 3. Fetch Writing Documents
             fetch(`${API_URL}/writing`, { headers: { 'x-auth-token': token } })
               .then(res => res.ok ? res.json() : [])
               .then(writingDocsData => setWritingDocuments(writingDocsData)),
-            // 4. Fetch Tasks
             fetch(`${API_URL}/tasks`, { headers: { 'x-auth-token': token } })
                .then(res => res.ok ? res.json() : [])
-               .then(tasksData => setTasks(tasksData))
+               .then(tasksData => setTasks(tasksData)),
+            fetch(`${API_URL}/activities`, { headers: { 'x-auth-token': token } })
+                .then(res => res.ok ? res.json() : [])
+                .then(activitiesData => setActivities(activitiesData)),
+            fetch(`${API_URL}/stats`, { headers: { 'x-auth-token': token } })
+                .then(res => res.ok ? res.json() : null)
+                .then(statsData => setStats(statsData))
           ]);
 
         } catch (error) {
           console.error("Failed to fetch initial data:", error);
-          // Use the logout handler to clear state and redirect
-          localStorage.removeItem('token'); // Explicitly remove invalid token
+          localStorage.removeItem('token');
           setCurrentUser(null);
           setDocuments([]);
           setWritingDocuments([]);
           setTasks([]);
+          setActivities([]);
+          setStats(null);
           setView(AppView.LOGIN);
         }
       };
       fetchInitialData();
     } else {
-        setView(AppView.LOGIN); // Ensure login view if no token
+        setView(AppView.LOGIN);
     }
-  }, [getAuthToken]); // Added getAuthToken as dependency
+  }, [getAuthToken]); 
 
 
-  // --- BACKEND INTEGRATION ---
-  // Updated Auth Handlers
+  // --- Auth Handlers ---
   const handleRegister = useCallback(async (fullName: string, email: string, password: string): Promise<{ success: boolean, message: string }> => {
-    setError(''); // Clear previous errors
+    setError('');
     try {
       const res = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
@@ -126,27 +121,27 @@ const App: React.FC = () => {
 
       localStorage.setItem('token', data.token);
 
-      // Fetch full user data after registration to get defaults
       const fullUserRes = await fetch(`${API_URL}/auth/user`, { headers: { 'x-auth-token': data.token }});
       if (!fullUserRes.ok) throw new Error('Failed to fetch user data after registration');
       const fullUserData = await fullUserRes.json();
       setCurrentUser(fullUserData);
 
-      // Reset data states for new user
       setDocuments([]);
       setWritingDocuments([]);
       setTasks([]);
+      setActivities([]); 
+      setStats(null);
 
-      setView(AppView.CREATE_PROFILE); // Navigate to create profile
+      setView(AppView.CREATE_PROFILE);
       return { success: true, message: 'Registration successful! Please complete your profile.' };
     } catch (err: any) {
       setError(err.message);
       return { success: false, message: err.message };
     }
-  }, []); // Empty dependency array as it doesn't depend on component state
+  }, []); 
 
   const handleLogin = useCallback(async (email: string, password: string): Promise<{ success: boolean, message: string }> => {
-    setError(''); // Clear previous errors
+    setError(''); 
     try {
       const res = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
@@ -159,12 +154,13 @@ const App: React.FC = () => {
       localStorage.setItem('token', data.token);
       const token = data.token;
 
-      // Fetch user data and other initial data after login
-      const [userRes, docsRes, writingDocsRes, tasksRes] = await Promise.all([
+      const [userRes, docsRes, writingDocsRes, tasksRes, activitiesRes, statsRes] = await Promise.all([
          fetch(`${API_URL}/auth/user`, { headers: { 'x-auth-token': token } }),
          fetch(`${API_URL}/documents`, { headers: { 'x-auth-token': token } }),
          fetch(`${API_URL}/writing`, { headers: { 'x-auth-token': token } }),
-         fetch(`${API_URL}/tasks`, { headers: { 'x-auth-token': token } })
+         fetch(`${API_URL}/tasks`, { headers: { 'x-auth-token': token } }),
+         fetch(`${API_URL}/activities`, { headers: { 'x-auth-token': token } }),
+         fetch(`${API_URL}/stats`, { headers: { 'x-auth-token': token } })
       ]);
 
       if (!userRes.ok) throw new Error('Failed to fetch user data after login');
@@ -174,6 +170,8 @@ const App: React.FC = () => {
       setDocuments(docsRes.ok ? await docsRes.json() : []);
       setWritingDocuments(writingDocsRes.ok ? await writingDocsRes.json() : []);
       setTasks(tasksRes.ok ? await tasksRes.json() : []);
+      setActivities(activitiesRes.ok ? await activitiesRes.json() : []); 
+      setStats(statsRes.ok ? await statsRes.json() : null);
 
       setView(AppView.DASHBOARD);
       return { success: true, message: 'Login successful!' };
@@ -181,16 +179,13 @@ const App: React.FC = () => {
       setError(err.message);
       return { success: false, message: err.message };
     }
-  }, []); // Empty dependency array
+  }, []); 
 
-  // Updated Forgot/Reset Password (Frontend only simulates request start)
   const handleForgotPassword = useCallback(async (email: string): Promise<{ success: boolean, message: string }> => {
       setError('');
       if (!email) return { success: false, message: 'Please enter your email.' };
-      // TODO: Implement actual API call to backend's forgot password endpoint
-      // POST /api/auth/forgot-password with { email }
       console.log(`(Simulated) Password reset request sent for: ${email}`);
-      setPasswordResetEmail(email); // Store email to potentially use in reset step
+      setPasswordResetEmail(email); 
       alert(`(Simulated) If an account exists for ${email}, reset instructions (or OTP) have been sent.`);
       return { success: true, message: 'Password reset initiated.' };
   }, []);
@@ -198,11 +193,9 @@ const App: React.FC = () => {
   const handleResetPassword = useCallback(async (otp: string, newPassword: string): Promise<{ success: boolean, message: string }> => {
       setError('');
       if (!passwordResetEmail) return { success: false, message: 'Password reset process not started or email missing.'};
-       // TODO: Implement actual API call to backend's reset password endpoint
-      // POST /api/auth/reset-password with { email: passwordResetEmail, otp, newPassword }
       console.log(`(Simulated) Resetting password for ${passwordResetEmail} with OTP ${otp}`);
       setPasswordResetEmail(null);
-      setView(AppView.LOGIN); // Redirect to login after successful reset
+      setView(AppView.LOGIN); 
       alert('(Simulated) Password has been reset. Please log in.');
       return { success: true, message: 'Password reset successful.' };
   }, [passwordResetEmail]);
@@ -214,13 +207,14 @@ const App: React.FC = () => {
     setDocuments([]);
     setWritingDocuments([]);
     setTasks([]);
+    setActivities([]); 
+    setStats(null);
     setActiveDocument(null);
     setError('');
     setView(AppView.LOGIN);
-  }, []); // Empty dependency array
+  }, []); 
 
-  // --- BACKEND INTEGRATION ---
-  // Updated Profile Handlers
+  // --- Profile Handlers ---
   const handleProfileCreate = useCallback(async (fullName: string, status: string) => {
     setError('');
     if (!currentUser) return;
@@ -231,12 +225,19 @@ const App: React.FC = () => {
         const res = await fetch(`${API_URL}/profile`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
-            body: JSON.stringify({ fullName, status }), // Send only updated fields
+            body: JSON.stringify({ fullName, status }), 
         });
         if (!res.ok) throw new Error('Failed to update profile');
         const updatedUser = await res.json();
         setCurrentUser(updatedUser);
         setView(AppView.DASHBOARD);
+        setActivities(prev => [{
+            _id: `activity-${Date.now()}`,
+            userId: currentUser.id,
+            icon: 'profile',
+            text: 'Profile created!',
+            createdAt: new Date().toISOString()
+        }, ...prev]);
     } catch (err: any) {
         setError(err.message);
     }
@@ -248,7 +249,6 @@ const App: React.FC = () => {
       const token = getAuthToken();
       if (!token) return handleLogout();
 
-      // Optimistic Update
       const previousUser = currentUser;
       setCurrentUser(prev => ({ ...prev!, ...updatedUserData }));
 
@@ -256,7 +256,7 @@ const App: React.FC = () => {
           const res = await fetch(`${API_URL}/profile`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
-              body: JSON.stringify({ // Send only allowed fields
+              body: JSON.stringify({ 
                   fullName: updatedUserData.fullName,
                   status: updatedUserData.status,
                   integrations: updatedUserData.integrations
@@ -264,10 +264,10 @@ const App: React.FC = () => {
           });
           if (!res.ok) throw new Error('Failed to update profile');
           const finalUser = await res.json();
-          setCurrentUser(finalUser); // Update with final data from server
+          setCurrentUser(finalUser);
       } catch (err: any) {
           setError(err.message);
-          setCurrentUser(previousUser); // Revert on error
+          setCurrentUser(previousUser);
       }
   }, [currentUser, getAuthToken, handleLogout]);
 
@@ -280,10 +280,9 @@ const App: React.FC = () => {
   }, []);
 
   const handleViewDocument = useCallback((docId: string, options?: { pageNumber?: number }) => {
-    // Handle both frontend ID and backend _id
     const doc = documents.find(d => (d.id || (d as any)._id) === docId);
     if (doc) {
-      const actualId = doc.id || (doc as any)._id; // Use the actual ID found
+      const actualId = doc.id || (doc as any)._id; 
       setActiveDocument(doc);
       if (options?.pageNumber) {
         setScrollTarget({ docId: actualId, pageNumber: options.pageNumber });
@@ -312,8 +311,7 @@ const App: React.FC = () => {
   }, []);
   const handleGoToWritingWizard = useCallback(() => setView(AppView.WRITING_WIZARD), []);
 
-  // --- BACKEND INTEGRATION ---
-  // Updated Onboarding Handler
+  // --- Onboarding Handler ---
   const handleOnboardingComplete = useCallback(async (groupDraft: GroupDraft) => {
     setError('');
     const token = getAuthToken();
@@ -329,21 +327,29 @@ const App: React.FC = () => {
             const errorData = await res.json();
             throw new Error(errorData.msg || 'Failed to save group');
         }
-        // Group saved, proceed to dashboard
+        const savedGroup = await res.json(); 
+        setActivities(prev => [
+            {
+                _id: `activity-${Date.now()}`,
+                userId: savedGroup.ownerId,
+                icon: 'group',
+                text: `Created a new group: ${savedGroup.name}`,
+                createdAt: new Date().toISOString()
+            },
+            ...prev
+        ]);
+        
         setView(AppView.DASHBOARD);
     } catch (err: any) {
         setError("Could not create the group: " + err.message);
-        // Keep user on onboarding view to show error
     }
   }, [getAuthToken, handleLogout]);
 
-  // --- BACKEND INTEGRATION ---
-  // Updated Document Note Update Handler
+  // --- Document Note Update Handler ---
   const handleUpdateDocument = useCallback(async (updatedDoc: Document) => {
     setError('');
     const token = getAuthToken();
     if (!token) return handleLogout();
-    // Use _id from MongoDB if available, otherwise fallback to potential frontend id
     const docId = (updatedDoc as any)._id || updatedDoc.id;
 
     if (!docId) {
@@ -351,7 +357,6 @@ const App: React.FC = () => {
         return;
     }
 
-    // Optimistic UI update
     const previousDocuments = documents;
     setDocuments(prevDocs => prevDocs.map(doc => ((doc as any)._id || doc.id) === docId ? updatedDoc : doc));
     setActiveDocument(updatedDoc);
@@ -360,24 +365,21 @@ const App: React.FC = () => {
       const res = await fetch(`${API_URL}/documents/${docId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
-        body: JSON.stringify({ userNotes: updatedDoc.userNotes }), // Only send notes
+        body: JSON.stringify({ userNotes: updatedDoc.userNotes }), 
       });
 
       if (!res.ok) {
           const errorData = await res.json();
           throw new Error(errorData.msg || 'Failed to save notes to server');
       }
-      // Success, optimistic update is correct
     } catch (err: any) {
       setError(`Error saving notes: ${err.message}`);
-      // Revert optimistic update on failure
       setDocuments(previousDocuments);
       setActiveDocument(previousDocuments.find(d => ((d as any)._id || d.id) === docId) || null);
     }
   }, [documents, getAuthToken, handleLogout]);
 
-  // --- BACKEND INTEGRATION ---
-  // Updated Writing Wizard Handlers
+  // --- Writing Wizard Handlers ---
   const handleCreateWritingDocument = useCallback(async () => {
     setError('');
     const token = getAuthToken();
@@ -386,12 +388,23 @@ const App: React.FC = () => {
         const res = await fetch(`${API_URL}/writing`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
-            body: JSON.stringify({ title: 'Untitled Document' }) // Backend creates defaults
+            body: JSON.stringify({ title: 'Untitled Document' }) 
         });
         if (!res.ok) throw new Error('Failed to create document');
         const newDoc = await res.json();
         setWritingDocuments(prev => [newDoc, ...prev]);
-        setActiveWritingDocumentId(newDoc._id); // Use _id from MongoDB response
+        setActiveWritingDocumentId(newDoc._id); 
+        
+        setActivities(prev => [
+            {
+                _id: `activity-${Date.now()}`,
+                userId: newDoc.userId,
+                icon: 'writing',
+                text: `Started a new document: ${newDoc.title}`,
+                createdAt: new Date().toISOString()
+            },
+            ...prev
+        ]);
     } catch (err: any) {
         setError(err.message);
     }
@@ -401,17 +414,15 @@ const App: React.FC = () => {
     setError('');
     const token = getAuthToken();
     if (!token) return handleLogout();
-    // Use the passed ID directly (_id from MongoDB)
     const docId = updatedDocData.id;
     if (!docId) {
         setError("Cannot update writing document without ID.");
         return;
     }
 
-    // Optimistic Update
     const previousWritingDocs = writingDocuments;
     const updatedDoc = {
-        ...writingDocuments.find(d => (d as any)._id === docId), // Find by _id
+        ...writingDocuments.find(d => (d as any)._id === docId), 
         ...updatedDocData,
         lastModified: new Date()
     };
@@ -424,10 +435,9 @@ const App: React.FC = () => {
             body: JSON.stringify({ title: updatedDoc.title, content: updatedDoc.content })
         });
         if (!res.ok) throw new Error('Failed to update document');
-        // Success
     } catch (err: any) {
         setError(err.message);
-        setWritingDocuments(previousWritingDocs); // Revert on error
+        setWritingDocuments(previousWritingDocs); 
     }
   }, [writingDocuments, getAuthToken, handleLogout]);
 
@@ -436,7 +446,6 @@ const App: React.FC = () => {
     const token = getAuthToken();
     if (!token) return handleLogout();
 
-    // Optimistic Update
     const previousWritingDocs = writingDocuments;
     setWritingDocuments(prev => prev.filter(d => (d as any)._id !== id));
     if (activeWritingDocumentId === id) {
@@ -449,11 +458,9 @@ const App: React.FC = () => {
             headers: { 'x-auth-token': token }
         });
         if (!res.ok) throw new Error('Failed to delete document');
-        // Success
     } catch (err: any) {
         setError(err.message);
-        setWritingDocuments(previousWritingDocs); // Revert
-        // If the active doc was deleted and revert happens, reset active ID
+        setWritingDocuments(previousWritingDocs); 
         if (activeWritingDocumentId === id) {
              setActiveWritingDocumentId(id);
         }
@@ -461,119 +468,62 @@ const App: React.FC = () => {
   }, [activeWritingDocumentId, writingDocuments, getAuthToken, handleLogout]);
 
 
-  // --- BACKEND INTEGRATION ---
-  // Updated Core Processing Logic (handleFileProcessing)
+  // --- NEW: Refactored Core Processing Logic ---
   const handleFileProcessing = useCallback(async (file: File) => {
     if (!file) return;
     setError('');
-    const token = getAuthToken();
-    if (!token) return handleLogout();
-
     setSummarizerView(SummarizerView.PROCESSING);
-    setProcessingMessage('Starting analysis...'); // Initial message
+    setProcessingMessage('Uploading file to secure server...'); 
 
     try {
-      // 1. Frontend AI Processing (as before)
-      let pages: PdfPage[];
-      if (file.type.startsWith('image/')) {
-        setProcessingMessage('Step 1/6: Analyzing document photo...');
-        pages = await processImage(file);
-      } else if (file.type === 'application/pdf') {
-        setProcessingMessage('Step 1/6: Analyzing research paper...');
-        pages = await processPdf(file);
-      } else {
-        throw new Error("Unsupported file type. Please upload a PDF or an image.");
-      }
+      const savedDocument = await processFileOnBackend(file, (msg) => setProcessingMessage(msg));
 
-      const fullText = pages.map(p => p.text).join('\n\n');
-      if (fullText.trim().length < 50) {
-        throw new Error("Document text is too short or text extraction failed. Please try a different file or ensure it's not an image-only PDF.");
-      }
-
-      setProcessingMessage('Step 2/6: Generating section summaries...');
-      const generatedSummaries = await generateDoodleSummary(pages, (msg) => setProcessingMessage(msg)); // Pass progress updater
-
-      setProcessingMessage('Step 4/6: Compiling your notebook...');
-      const finalNotebookSummary = await generateNotebookSummary(generatedSummaries);
-
-      setProcessingMessage('Step 5/6: Creating a final summary...');
-      const finalTotalSummary = await generateTotalSummary(generatedSummaries);
-
-      setProcessingMessage('Step 6/6: Building a mini exercise...');
-      const finalMiniExercise = await generateMiniExercise(generatedSummaries);
-
-      // 2. Prepare data object to save
-      // Note: Saving imageUrls (potentially large base64 strings) to DB might hit size limits.
-      // Consider storing images in a separate file storage (like S3, Firebase Storage)
-      // and only saving the URL in the DB for production. For now, saving as is.
-      const documentToSave = {
-        fileName: file.name,
-        pdfPages: pages.map(p => ({ pageNumber: p.pageNumber, imageUrl: p.imageUrl, text: p.text })),
-        chunkSummaries: generatedSummaries,
-        notebookSummary: finalNotebookSummary,
-        totalSummary: finalTotalSummary,
-        miniExercise: finalMiniExercise,
-        userNotes: [],
-      };
-
-      setProcessingMessage('Saving your summary to the database...');
-
-      // 3. Send processed data to backend
-      const res = await fetch(`${API_URL}/documents`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
-        body: JSON.stringify(documentToSave),
-      });
-
-      if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.msg || 'Failed to save document to server');
-      }
-
-      const savedDocument = await res.json();
-
-      // 4. Update frontend state
+      setProcessingMessage('Updating dashboard...');
+      
+      // Update frontend state
       setDocuments(prev => [savedDocument, ...prev]);
       setActiveDocument(savedDocument);
       setSummarizerView(SummarizerView.RESULTS);
+      
+      // Add to activities feed
+      setActivities(prev => [
+          {
+              _id: `activity-${Date.now()}`,
+              userId: savedDocument.userId,
+              icon: 'summarizer',
+              text: `Summarized the document: ${savedDocument.fileName}`,
+              createdAt: new Date().toISOString()
+          },
+          ...prev
+      ]);
+      
+      // Refresh stats
+      const token = getAuthToken();
+      if(token) {
+        fetch(`${API_URL}/stats`, { headers: { 'x-auth-token': token } })
+          .then(res => res.ok ? res.json() : null)
+          .then(statsData => setStats(statsData));
+      }
 
     } catch (err: any) {
       console.error("File Processing Error:", err);
       setError(`Failed to process the document. ${err.message}`);
       setSummarizerView(SummarizerView.ERROR);
     } finally {
-      setProcessingMessage(''); // Clear message on success or error
+      setProcessingMessage(''); 
     }
-  }, [getAuthToken, handleLogout]);
+  }, [getAuthToken]); // Removed handleLogout dependency, it's called internally
 
-  // --- Storyfy Logic (Frontend AI Call) ---
+  // --- NEW: Refactored Storyfy Logic ---
   const handleGenerateStory = useCallback(async (file: File) => {
     if (!file) return;
     setError('');
-    const token = getAuthToken(); // Check auth
-    if (!token) return handleLogout();
-
     setStoryfyState('PROCESSING');
     setStoryContent('');
-    setProcessingMessage("Reading document for story...");
+    setProcessingMessage("Uploading document for story analysis...");
 
     try {
-      let pages: PdfPage[];
-      if (file.type === 'application/pdf') {
-        pages = await processPdf(file);
-      } else if (file.type.startsWith('image/')) {
-        pages = await processImage(file);
-      } else {
-        throw new Error("Unsupported file type for Storyfy.");
-      }
-
-      const fullText = pages.map(p => p.text).join('\n\n');
-      if (fullText.trim().length < 100) {
-        throw new Error("Document text is too short to generate a story.");
-      }
-
-      setProcessingMessage("Crafting the story...");
-      const story = await generateCreatorStory(fullText); // Frontend AI call
+      const story = await generateCreatorStory(file); 
       setStoryContent(story);
       setStoryfyState('RESULT');
 
@@ -584,11 +534,9 @@ const App: React.FC = () => {
     } finally {
         setProcessingMessage('');
     }
-  }, [getAuthToken, handleLogout]);
+  }, []); // Removed getAuthToken/handleLogout, service handles it
 
-  // --- AI Suggestion Logic (Frontend AI Call) ---
-  // This function is intended to be passed down to the RichTextEditor
-  // It fetches suggestions but doesn't apply them directly here.
+  // --- NEW: Refactored AI Suggestion Logic ---
   const fetchAISuggestions = useCallback(async (currentContent: string): Promise<string | null> => {
       setError('');
       try {
@@ -597,22 +545,97 @@ const App: React.FC = () => {
           const textContent = tempDiv.textContent || '';
           if (!textContent.trim()) return null;
 
-          const suggestedHtml = await suggestImprovements(textContent); // Frontend AI call
+          const suggestedHtml = await suggestImprovements(textContent); 
           return suggestedHtml;
 
       } catch (err: any) {
           setError(`AI Suggestion Error: ${err.message}`);
-          return null; // Return null on error
+          return null; 
       }
   }, []);
 
+  // --- TASK HANDLERS (Unchanged) ---
+  const handleAddTask = useCallback(async (text: string) => {
+    const token = getAuthToken();
+    if (!token || !text.trim()) return;
+    const tempId = `task-${Date.now()}`;
+    const newTask: Task = { id: tempId, text: text.trim(), completed: false };
+    setTasks(prevTasks => [...prevTasks, newTask]);
+    try {
+      const res = await fetch(`${API_URL}/tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+        body: JSON.stringify({ text: text.trim() }),
+      });
+      if (!res.ok) throw new Error('Failed to save task');
+      const savedTask = await res.json();
+      setTasks(prevTasks => prevTasks.map(t => t.id === tempId ? { ...savedTask, id: savedTask._id } : t));
+    } catch (err) {
+      console.error("Failed to add task:", err);
+      setError("Failed to save new task.");
+      setTasks(prevTasks => prevTasks.filter(t => t.id !== tempId));
+    }
+  }, [getAuthToken]);
+
+  const handleToggleTask = useCallback(async (taskId: string) => {
+    const token = getAuthToken();
+    if (!token) return;
+    const task = tasks.find(t => (t as any)._id === taskId);
+    if (!task) return;
+    const updatedTask = { ...task, completed: !task.completed };
+    const previousTasks = tasks;
+    setTasks(prevTasks => prevTasks.map(t => (t as any)._id === taskId ? updatedTask : t));
+    try {
+      const res = await fetch(`${API_URL}/tasks/${taskId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+        body: JSON.stringify({ completed: updatedTask.completed }), 
+      });
+      if (!res.ok) throw new Error('Failed to update task');
+      if (updatedTask.completed) {
+         setActivities(prev => [
+            {
+                _id: `activity-${Date.now()}`,
+                userId: (task as any).userId,
+                icon: 'task',
+                text: `Completed task: ${updatedTask.text}`,
+                createdAt: new Date().toISOString()
+            },
+            ...prev
+        ]);
+        fetch(`${API_URL}/stats`, { headers: { 'x-auth-token': token } })
+          .then(res => res.ok ? res.json() : null)
+          .then(statsData => setStats(statsData));
+      }
+    } catch (err) {
+      console.error("Failed to toggle task:", err);
+      setError("Failed to update task.");
+      setTasks(previousTasks); 
+    }
+  }, [tasks, getAuthToken]);
+
+  const handleDeleteTask = useCallback(async (taskId: string) => {
+    const token = getAuthToken();
+    if (!token) return;
+    const previousTasks = tasks;
+    setTasks(prevTasks => prevTasks.filter(t => (t as any)._id !== taskId));
+    try {
+      const res = await fetch(`${API_URL}/tasks/${taskId}`, {
+        method: 'DELETE',
+        headers: { 'x-auth-token': token },
+      });
+      if (!res.ok) throw new Error('Failed to delete task');
+    } catch (err) {
+      console.error("Failed to delete task:", err);
+      setError("Failed to delete task.");
+      setTasks(previousTasks); 
+    }
+  }, [getAuthToken, tasks]); 
+
 
   // --- RENDER LOGIC ---
-
   const renderSummarizerContent = () => {
-    // Make sure we pass the correct ID (_id) to ResultsView
     const activeDocForResults = activeDocument ? { ...activeDocument, id: (activeDocument as any)._id || activeDocument.id } : null;
-
     switch (summarizerView) {
       case SummarizerView.UPLOAD:
         return <FileUploadView onFileUpload={handleFileProcessing} onBack={handleGoToDashboard} onTakePhoto={() => setSummarizerView(SummarizerView.TAKE_PHOTO)} />;
@@ -622,17 +645,16 @@ const App: React.FC = () => {
         if (activeDocForResults) {
           return <ResultsView
             document={activeDocForResults}
-            onUpdateDocument={handleUpdateDocument} // Passes the updated doc object
+            onUpdateDocument={handleUpdateDocument} 
             onReset={handleGoToDashboard}
             onShowNotebook={() => setSummarizerView(SummarizerView.NOTEBOOK)}
             scrollTarget={scrollTarget}
             onClearScrollTarget={() => setScrollTarget(null)}
             />;
         }
-        // If activeDocument becomes null unexpectedly, show error/go back
         return <ErrorView message="Could not load summary results. Document not found." onReset={handleGoToDashboard} />;
       case SummarizerView.NOTEBOOK:
-        if (activeDocument) { // Use the state variable directly here
+        if (activeDocument) { 
           return <NotebookView
             document={activeDocument}
             onReset={handleGoToDashboard}
@@ -645,17 +667,14 @@ const App: React.FC = () => {
       case SummarizerView.ERROR:
         return <ErrorView message={error} onReset={handleGoToDashboard} />;
       default:
-        // Fallback to upload view
         return <FileUploadView onFileUpload={handleFileProcessing} onBack={handleGoToDashboard} onTakePhoto={() => setSummarizerView(SummarizerView.TAKE_PHOTO)} />;
     }
   };
 
   const renderContent = () => {
-    // Handle loading state while initial token/user check happens
     if (view === AppView.LOGIN && getAuthToken() && currentUser === null) {
         return <div className="flex items-center justify-center h-screen"><ProcessingView message="Loading your dashboard..." /></div>;
     }
-
     switch(view) {
         case AppView.LOGIN:
             return <AuthView
@@ -665,16 +684,30 @@ const App: React.FC = () => {
                         onResetPassword={handleResetPassword}
                     />;
         case AppView.CREATE_PROFILE:
-            // Redirect to login if user data is lost somehow
             if (!currentUser) return <AuthView onRegister={handleRegister} onLogin={handleLogin} onForgotPassword={handleForgotPassword} onResetPassword={handleResetPassword} />;
             return <CreateProfileView onProfileCreate={handleProfileCreate} />;
         case AppView.ONBOARDING:
-            // Redirect to login if user data is lost
              if (!currentUser) return <AuthView onRegister={handleRegister} onLogin={handleLogin} onForgotPassword={handleForgotPassword} onResetPassword={handleResetPassword} />;
             return <OnboardingView onComplete={(groupDraft) => handleOnboardingComplete(groupDraft)} onExit={handleLogout} />;
         case AppView.DASHBOARD:
              if (!currentUser) return <AuthView onRegister={handleRegister} onLogin={handleLogin} onForgotPassword={handleForgotPassword} onResetPassword={handleResetPassword} />;
-            return <DashboardView user={currentUser} documents={documents} tasks={tasks} /* Pass tasks */ onStartNew={handleStartNew} onViewDocument={handleViewDocument} onNavigateToProfile={handleGoToProfile} onNavigateToMemory={handleGoToMemory} onNavigateToStoryfy={handleGoToStoryfy} onNavigateToWritingWizard={handleGoToWritingWizard} onLogout={handleLogout} />;
+            return <DashboardView
+                      user={currentUser}
+                      documents={documents}
+                      tasks={tasks}
+                      activities={activities}
+                      stats={stats} 
+                      onStartNew={handleStartNew}
+                      onViewDocument={handleViewDocument}
+                      onNavigateToProfile={handleGoToProfile}
+                      onNavigateToMemory={handleGoToMemory}
+                      onNavigateToStoryfy={handleGoToStoryfy}
+                      onNavigateToWritingWizard={handleGoToWritingWizard}
+                      onLogout={handleLogout}
+                      onAddTask={handleAddTask}
+                      onToggleTask={handleToggleTask}
+                      onDeleteTask={handleDeleteTask}
+                    />;
         case AppView.SUMMARIZER:
             if (!currentUser) return <AuthView onRegister={handleRegister} onLogin={handleLogin} onForgotPassword={handleForgotPassword} onResetPassword={handleResetPassword} />;
             return renderSummarizerContent();
@@ -690,7 +723,7 @@ const App: React.FC = () => {
                 state={storyfyState}
                 storyContent={storyContent}
                 error={error}
-                onGenerate={handleGenerateStory}
+                onGenerate={handleGenerateStory} // --- NEW: Pass the refactored handler
                 onBack={handleGoToDashboard}
                 onReset={() => {
                   setStoryfyState('UPLOAD');
@@ -701,30 +734,26 @@ const App: React.FC = () => {
         case AppView.WRITING_WIZARD:
             if (!currentUser) return <AuthView onRegister={handleRegister} onLogin={handleLogin} onForgotPassword={handleForgotPassword} onResetPassword={handleResetPassword} />;
             return <WritingWizardView
-                documents={writingDocuments}
+                documents={writingDocuments.map(d => ({ ...d, id: (d as any)._id }))}
                 activeDocumentId={activeWritingDocumentId}
-                onSelectDocument={setActiveWritingDocumentId}
+                onSelectDocument={(id) => setActiveWritingDocumentId(id)}
                 onCreateDocument={handleCreateWritingDocument}
-                onUpdateDocument={(doc) => handleUpdateWritingDocument(doc)} // Use the _id provided by backend
+                onUpdateDocument={(doc) => handleUpdateWritingDocument({ ...doc, id: (doc as any)._id || doc.id })}
                 onDeleteDocument={handleDeleteWritingDocument}
                 onBack={handleGoToDashboard}
-                fetchAISuggestions={fetchAISuggestions} // Pass the suggestion function
             />;
         default:
-            // Fallback to login if state is somehow invalid
             return <AuthView onRegister={handleRegister} onLogin={handleLogin} onForgotPassword={handleForgotPassword} onResetPassword={handleResetPassword} />;
     }
   }
 
   // --- MAIN RENDER ---
-  // Adjusted mainClass logic slightly
   const mainClass = view === AppView.LOGIN || view === AppView.CREATE_PROFILE
-    ? 'flex-grow flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8' // Center login/profile create
-    : 'flex-grow'; // Let other views handle their layout/padding
+    ? 'flex-grow flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8' 
+    : 'flex-grow'; 
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-[#121212]">
-      {/* Header rendered based on view */}
       {view !== AppView.LOGIN && view !== AppView.CREATE_PROFILE && <Header user={currentUser} onLogout={handleLogout} />}
       <main className={mainClass}>
         {renderContent()}
@@ -734,4 +763,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-

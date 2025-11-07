@@ -14,6 +14,7 @@ import Draggable from './Draggable';
 declare const marked: any;
 declare const html2canvas: any;
 declare const jspdf: any;
+declare const pdfjsLib: any;
 
 interface ResultsViewProps {
   document: Document;
@@ -64,17 +65,53 @@ const DraggablePage: React.FC<{
     layouts: { [key: string]: React.CSSProperties };
     pageCount: number;
     onDoodleDoubleClick: (url: string) => void;
-}> = ({ page, chunkSummaries, userNotes, onNoteAdd, onNoteUpdate, onNoteDelete, onLayoutChange, layouts, pageCount, onDoodleDoubleClick }) => {
+    pdfDataUrl?: string;
+}> = ({ page, chunkSummaries, userNotes, onNoteAdd, onNoteUpdate, onNoteDelete, onLayoutChange, layouts, pageCount, onDoodleDoubleClick, pdfDataUrl }) => {
     const pageRef = useRef<HTMLDivElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+
+    // Client-side PDF render fallback when imageUrl missing
+    useEffect(() => {
+      if (!pdfDataUrl || page.imageUrl) return; // no need if we already have an image
+      if (!canvasRef.current || !pageRef.current || typeof pdfjsLib === 'undefined') return;
+      let cancelled = false;
+      (async () => {
+        try {
+          const pdf = await pdfjsLib.getDocument({ url: pdfDataUrl }).promise;
+          const pdfPage = await pdf.getPage(page.pageNumber);
+          const container = pageRef.current!;
+          const c = canvasRef.current!;
+          const rect = container.getBoundingClientRect();
+          // Render with scale that fits the container width
+          const viewport = pdfPage.getViewport({ scale: 1 });
+          const scale = Math.min(rect.width / viewport.width, rect.height / viewport.height);
+          const vp = pdfPage.getViewport({ scale: scale || 1 });
+          c.width = Math.ceil(vp.width);
+          c.height = Math.ceil(vp.height);
+          const ctx = c.getContext('2d');
+          await pdfPage.render({ canvasContext: ctx, viewport: vp }).promise;
+        } catch (e) {
+          // ignore render errors; page will remain white
+          console.warn('PDF render fallback failed:', e);
+        }
+      })();
+      return () => { cancelled = true; };
+    }, [pdfDataUrl, page.imageUrl, page.pageNumber]);
 
     return (
         <div id={`page-${page.pageNumber}`} ref={pageRef} className="relative shadow-lg rounded-lg overflow-hidden bg-white aspect-[8.5/11] pdf-page-container">
-            <div 
-                style={{ backgroundImage: `url(${page.imageUrl})`}}
-                className="absolute inset-0 bg-cover bg-center filter blur-[1px] scale-105 opacity-80 dark:opacity-40"
-            />
+            {page.imageUrl ? (
+              <img
+                src={page.imageUrl}
+                alt={`PDF page ${page.pageNumber}`}
+                className="absolute inset-0 w-full h-full object-contain"
+                draggable={false}
+              />
+            ) : (
+              <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+            )}
             
-            <div className="absolute inset-0">
+            <div className="absolute inset-0 z-10">
                 {chunkSummaries.map((summary, index) => (
                   <React.Fragment key={`summary-group-${page.pageNumber}-${index}`}>
                     <Draggable
@@ -508,6 +545,7 @@ const ResultsView: React.FC<ResultsViewProps> = ({ document, onUpdateDocument, o
                         layouts={aiLayouts}
                         pageCount={pdfPages.length}
                         onDoodleDoubleClick={(url) => setFocusedDoodleUrl(url)}
+                        pdfDataUrl={(document as any).sourcePdfDataUrl}
                     />
                 ))}
                 {totalSummary && <TotalSummaryPage content={totalSummary} />}

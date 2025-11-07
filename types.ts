@@ -6,6 +6,27 @@ export interface Task {
   completed: boolean;
 }
 
+export interface Activity {
+  _id: string; // From MongoDB
+  text: string;
+  icon: string; // 'summarizer', 'task', 'profile', 'group', 'writing'
+  createdAt: string; // Will be an ISO date string
+  userId: string;
+}
+
+// --- NEW: Add Stats types ---
+export interface ChartData {
+  label: string;
+  value: number;
+}
+
+export interface AppStats {
+  daily: ChartData[];
+  weekly: ChartData[];
+  monthly: ChartData[];
+}
+// --- End NEW ---
+
 export interface PdfPage {
   pageNumber: number;
   imageUrl: string;
@@ -87,6 +108,7 @@ export interface Document {
     id: string;
     fileName: string;
     createdAt: Date;
+    sourcePdfDataUrl?: string; // optional, for client-side PDF rendering
     pdfPages: PdfPage[];
     chunkSummaries: ChunkSummary[];
     notebookSummary: string;

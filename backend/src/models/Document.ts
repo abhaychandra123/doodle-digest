@@ -2,7 +2,8 @@ import mongoose, { Schema, Document as MongooseDocument } from 'mongoose';
 
 const pdfPageSchema = new Schema({
   pageNumber: { type: Number, required: true },
-  imageUrl: { type: String, required: true },
+  // Image URL is optional on backend (we don't render page bitmaps server-side)
+  imageUrl: { type: String, default: '' },
   text: { type: String, required: true },
 }, { _id: false });
 
@@ -23,6 +24,8 @@ const userNoteSchema = new Schema({
 const documentSchema = new Schema({
   fileName: { type: String, required: true },
   createdAt: { type: Date, default: Date.now },
+  // Optional original PDF as data URL for client-side rendering
+  sourcePdfDataUrl: { type: String },
   pdfPages: [pdfPageSchema],
   chunkSummaries: [chunkSummarySchema],
   notebookSummary: { type: String },

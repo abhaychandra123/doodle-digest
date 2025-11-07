@@ -10,9 +10,11 @@ export default defineConfig(({ mode }) => {
         host: '0.0.0.0',
       },
       plugins: [react()],
+      // --- NEW: Define VITE_API_URL, REMOVE API_KEY ---
       define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
+        // This allows the frontend to know where the backend is
+        'import.meta.env.VITE_API_URL': JSON.stringify(env.VITE_API_URL || 'http://localhost:5001/api'),
+        // --- DELETED THE GEMINI_API_KEY DEFINITION ---
       },
       resolve: {
         alias: {

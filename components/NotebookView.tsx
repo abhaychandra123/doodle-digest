@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { generateScribble } from '../services/geminiService';
+import { generateScribble } from '../services/aiService';
 import { SpinnerIcon } from './icons/SpinnerIcon';
 import { ArrowLeftIcon } from './icons/ArrowLeftIcon';
 import { RefreshIcon } from './icons/RefreshIcon';

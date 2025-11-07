@@ -5,7 +5,7 @@ import { DocumentIcon } from './icons/DocumentIcon';
 import { TrashIcon } from './icons/TrashIcon';
 import { ArrowLeftIcon } from './icons/ArrowLeftIcon';
 import RichTextEditor from './RichTextEditor';
-import { suggestImprovements } from '../services/geminiService';
+import { suggestImprovements } from '../services/aiService';
 import SuggestionModal from './SuggestionModal';
 import { GoogleDocsIcon } from './icons/GoogleDocsIcon';
 

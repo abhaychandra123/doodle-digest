@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Document } from '../types';
+import { User, Document, Task, Activity, AppStats, ChartData } from '../types'; // --- NEW: Import AppStats, ChartData ---
 import Sidebar from './Sidebar';
 import ProgressChart from './ProgressChart';
 import RecentActivities from './RecentActivities';
@@ -13,10 +13,14 @@ import { PencilIcon } from './icons/PencilIcon';
 import { DoodleProtractorIcon } from './icons/decorations/DoodleProtractorIcon';
 import { DoodleCompassIcon } from './icons/decorations/DoodleCompassIcon';
 import { PencilAltIcon } from './icons/PencilAltIcon';
+import { SpinnerIcon } from './icons/SpinnerIcon'; // --- NEW: Import SpinnerIcon ---
 
 interface DashboardViewProps {
   user: User;
   documents: Document[];
+  tasks: Task[];
+  activities: Activity[];
+  stats: AppStats | null; // --- NEW: Add stats prop (can be null) ---
   onStartNew: () => void;
   onViewDocument: (docId: string) => void;
   onNavigateToProfile: () => void;
@@ -24,23 +28,22 @@ interface DashboardViewProps {
   onNavigateToStoryfy: () => void;
   onNavigateToWritingWizard: () => void;
   onLogout: () => void;
+  onAddTask: (text: string) => void;
+  onToggleTask: (taskId: string) => void;
+  onDeleteTask: (taskId: string) => void;
 }
 
-const dailyData = [
-  { label: 'S', value: 5 }, { label: 'M', value: 10 }, { label: 'T', value: 8 },
-  { label: 'W', value: 40 }, { label: 'T', value: 15 }, { label: 'F', value: 0 }, { label: 'S', value: 4 }
+// --- NEW: Empty state for charts while loading ---
+const emptyChartData: ChartData[] = [];
+const loadingDailyData: ChartData[] = [
+  { label: 'S', value: 0 }, { label: 'M', value: 0 }, { label: 'T', value: 0 },
+  { label: 'W', value: 0 }, { label: 'T', value: 0 }, { label: 'F', value: 0 }, { label: 'S', value: 0 }
 ];
+const loadingWeeklyData: ChartData[] = [{ label: 'Week 0', value: 0 }];
+const loadingMonthlyData: ChartData[] = [{ label: 'J', value: 0 }];
 
-const weeklyData = [
-  { label: 'Week 1', value: 50 }, { label: 'Week 3', value: 20 }, { label: 'Week 5', value: 35 },
-  { label: 'Week 7', value: 45 }, { label: 'Week 9', value: 15 }
-];
 
-const monthlyData = [
-  { label: 'M', value: 2 }, { label: 'A', value: 3 }, { label: 'M', value: 4 }, { label: 'J', value: 3 },
-  { label: 'J', value: 5 }, { label: 'A', value: 6 }, { label: 'S', value: 4 }, { label: 'O', value: 40 },
-  { label: 'N', value: 25 }
-];
+// --- DELETED: Mock data arrays (dailyData, weeklyData, monthlyData) are gone ---
 
 const QuickAction: React.FC<{ icon: React.ReactNode; title: string; description: string; onClick: () => void; }> = ({ icon, title, description, onClick }) => (
     <button
@@ -57,7 +60,30 @@ const QuickAction: React.FC<{ icon: React.ReactNode; title: string; description:
     </button>
   );
 
-const DashboardView: React.FC<DashboardViewProps> = ({ user, documents, onStartNew, onViewDocument, onNavigateToProfile, onNavigateToMemory, onNavigateToStoryfy, onNavigateToWritingWizard, onLogout }) => {
+// --- NEW: Chart loading component ---
+const ChartLoader: React.FC = () => (
+  <div className="p-4 rounded-xl shadow-sm h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800/50">
+    <SpinnerIcon className="w-8 h-8 text-gray-400 dark:text-gray-500" />
+  </div>
+);
+
+const DashboardView: React.FC<DashboardViewProps> = ({
+  user,
+  documents,
+  tasks,
+  activities, 
+  stats, // --- NEW: Destructure stats ---
+  onStartNew,
+  onViewDocument,
+  onNavigateToProfile,
+  onNavigateToMemory,
+  onNavigateToStoryfy,
+  onNavigateToWritingWizard,
+  onLogout,
+  onAddTask,
+  onToggleTask,
+  onDeleteTask
+}) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   
@@ -177,7 +203,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, documents, onStartN
                     )}
                 </div>
                 <div className="xl:col-span-2">
-                    <DailyTasks />
+                    <DailyTasks 
+                      tasks={tasks}
+                      onAddTask={onAddTask}
+                      onToggleTask={onToggleTask}
+                      onDeleteTask={onDeleteTask}
+                    />
                 </div>
             </div>
             
@@ -185,43 +216,52 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, documents, onStartN
             <div>
               <h2 className="text-2xl font-bold text-black dark:text-white mb-4">Progress Overview</h2>
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <ProgressChart
-                  title="Daily Progress"
-                  subtitle="Activities for last (7) days"
-                  updated="updated 1 min ago"
-                  type="bar"
-                  data={dailyData}
-                  color="#ef4444" // red-500
-                  backgroundColor="#fecaca" // red-200
-                  darkBackgroundColor="rgba(239, 68, 68, 0.15)"
-                />
-                <ProgressChart
-                  title="Weekly Progress"
-                  subtitle="Activities for last (9) weeks"
-                  updated="updated 5 days ago"
-                  type="line"
-                  data={weeklyData}
-                  color="#22c55e" // green-500
-                  backgroundColor="#bbf7d0" // green-200
-                  darkBackgroundColor="rgba(34, 197, 94, 0.15)"
-                />
-                <ProgressChart
-                  title="Monthly Progress"
-                  subtitle="Activities for (Nov)"
-                  updated="just updated"
-                  type="line"
-                  data={monthlyData}
-                  color="#f59e0b" // amber-500
-                  backgroundColor="#fde68a" // amber-200
-                  darkBackgroundColor="rgba(245, 158, 11, 0.15)"
-                />
+                {/* --- NEW: Use stats prop, with a loading fallback --- */}
+                {stats ? (
+                  <ProgressChart
+                    title="Daily Progress"
+                    subtitle="Tasks completed this week"
+                    updated="just updated"
+                    type="bar"
+                    data={stats.daily}
+                    color="#ef4444" // red-500
+                    backgroundColor="#fecaca" // red-200
+                    darkBackgroundColor="rgba(239, 68, 68, 0.15)"
+                  />
+                ) : <ChartLoader />}
+                
+                {stats ? (
+                  <ProgressChart
+                    title="Weekly Progress"
+                    subtitle="Documents summarized"
+                    updated="just updated"
+                    type="line"
+                    data={stats.weekly}
+                    color="#22c55e" // green-500
+                    backgroundColor="#bbf7d0" // green-200
+                    darkBackgroundColor="rgba(34, 197, 94, 0.15)"
+                  />
+                ) : <ChartLoader />}
+
+                {stats ? (
+                  <ProgressChart
+                    title="Monthly Progress"
+                    subtitle="Documents summarized this year"
+                    updated="just updated"
+                    type="line"
+                    data={stats.monthly}
+                    color="#f59e0b" // amber-500
+                    backgroundColor="#fde68a" // amber-200
+                    darkBackgroundColor="rgba(245, 158, 11, 0.15)"
+                  />
+                ) : <ChartLoader />}
               </div>
             </div>
 
             {/* Recent Activities */}
             <div>
               <h2 className="text-2xl font-bold text-black dark:text-white mb-4">Recent Activities</h2>
-              <RecentActivities />
+              <RecentActivities activities={activities} />
             </div>
           </div>
         </div>

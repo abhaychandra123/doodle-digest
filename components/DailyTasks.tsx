@@ -2,34 +2,22 @@ import React, { useState } from 'react';
 import { Task } from '../types';
 import { PlusIcon } from './icons/PlusIcon';
 import { ClipboardListIcon } from './icons/ClipboardListIcon';
+import { TrashIcon } from './icons/TrashIcon'; // Import the TrashIcon
 
-const initialTasks: Task[] = [
-  { id: 'task-1', text: 'Review Chapter 3 notes', completed: true },
-  { id: 'task-2', text: 'Outline the introduction for the new paper', completed: false },
-  { id: 'task-3', text: 'Find 3 new sources for the literature review', completed: false },
-];
+interface DailyTasksProps {
+  tasks: Task[];
+  onAddTask: (text: string) => void;
+  onToggleTask: (taskId: string) => void;
+  onDeleteTask: (taskId: string) => void;
+}
 
-const DailyTasks: React.FC = () => {
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+const DailyTasks: React.FC<DailyTasksProps> = ({ tasks, onAddTask, onToggleTask, onDeleteTask }) => {
   const [newTaskText, setNewTaskText] = useState('');
-
-  const handleToggleTask = (taskId: string) => {
-    setTasks(prevTasks =>
-      prevTasks.map(task =>
-        task.id === taskId ? { ...task, completed: !task.completed } : task
-      )
-    );
-  };
 
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (newTaskText.trim()) {
-      const newTask: Task = {
-        id: `task-${Date.now()}`,
-        text: newTaskText.trim(),
-        completed: false,
-      };
-      setTasks(prevTasks => [...prevTasks, newTask]);
+      onAddTask(newTaskText.trim()); // Call the prop function
       setNewTaskText('');
     }
   };
@@ -42,30 +30,41 @@ const DailyTasks: React.FC = () => {
       <div className="mt-4 flex-grow overflow-y-auto pr-2">
         {tasks.length > 0 ? (
           <ul className="space-y-2">
-            {tasks.map(task => (
-              <li key={task.id} className="flex items-center">
-                <input
-                  id={`task-checkbox-${task.id}`}
-                  type="checkbox"
-                  checked={task.completed}
-                  onChange={() => handleToggleTask(task.id)}
-                  className="h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
-                />
-                <label
-                  htmlFor={`task-checkbox-${task.id}`}
-                  className={`ml-3 text-sm font-medium text-black dark:text-white ${
-                    task.completed ? 'line-through text-gray-400 dark:text-gray-500' : ''
-                  }`}
-                >
-                  {task.text}
-                </label>
-              </li>
-            ))}
+            {tasks.map(task => {
+              // Use the backend's _id if present, otherwise fall back to id
+              const taskId = (task as any)._id || task.id;
+              return (
+                <li key={taskId} className="flex items-center group">
+                  <input
+                    id={`task-checkbox-${taskId}`}
+                    type="checkbox"
+                    checked={task.completed}
+                    onChange={() => onToggleTask(taskId)}
+                    className="h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <label
+                    htmlFor={`task-checkbox-${taskId}`}
+                    className={`ml-3 text-sm font-medium text-black dark:text-white flex-grow ${
+                      task.completed ? 'line-through text-gray-400 dark:text-gray-500' : ''
+                    }`}
+                  >
+                    {task.text}
+                  </label>
+                  <button
+                    onClick={() => onDeleteTask(taskId)}
+                    className="ml-2 p-1 rounded-full text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Delete task"
+                  >
+                    <TrashIcon className="w-4 h-4" />
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         ) : (
           <div className="text-center py-6">
             <ClipboardListIcon className="mx-auto w-12 h-12 text-gray-300 dark:text-gray-600" />
-            <p className="mt-2 text-sm font-semibold text-gray-500 dark:text-gray-400">All tasks completed!</p>
+            <p className="mt-2 text-sm font-semibold text-gray-500 dark:text-gray-400">No tasks for today. Add one!</p>
           </div>
         )}
       </div>
