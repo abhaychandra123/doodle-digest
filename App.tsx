@@ -24,7 +24,7 @@ import StoryfyView from './components/StoryfyView';
 import WritingWizardView from './components/WritingWizardView';
 
 // --- NEW: Get API URL from Vite environment ---
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+const API_URL = import.meta.env.VITE_API_URL;
 
 const App: React.FC = () => {
   // Main application state

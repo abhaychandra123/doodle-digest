@@ -184,6 +184,9 @@ const corsOptions = {
   optionsSuccessStatus: 204
 };
 app.use(cors(corsOptions));
+// Explicitly handle preflight requests for all routes
+app.options('*', cors(corsOptions));
+
 
 // --- OTHER MIDDLEWARE ---
 app.use(express.json({ limit: '50mb' }));
