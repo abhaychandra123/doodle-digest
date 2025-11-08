@@ -175,7 +175,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 // --- CORS MIDDLEWARE ---
 const corsOptions = {
-  origin: ['http://localhost:3000', 'http://localhost:3001'], // Allow both ports
+  origin: ['http://localhost:3000', 'http://localhost:3001', 'https://doodle-digest.vercel.app'], // Allow both ports
   methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'], // ✅ ARRAY
   allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'Accept'],
   exposedHeaders: ['x-auth-token'],
