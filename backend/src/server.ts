@@ -181,11 +181,11 @@ const corsOptions = {
   exposedHeaders: ['x-auth-token'],
   credentials: true,
   preflightContinue: false,
-  optionsSuccessStatus: 204
+  optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
 // Explicitly handle preflight requests for all routes
-app.options('*', cors(corsOptions));
+app.options('/*', cors(corsOptions));
 
 
 // --- OTHER MIDDLEWARE ---
