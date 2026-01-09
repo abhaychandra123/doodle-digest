@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doodle Digest Slide</title>
+    <!-- Google Font: "Kalam" (handwritten/doodle style) and "Inter" (for small, clear text) -->
+    <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --font-doodle: 'Kalam', cursive;
+            --font-sans: 'Inter', sans-serif;
+            --bg-color: #fefcf5; /* Creamy notebook paper */
+            --card-bg: #ffffff;
+            --text-color: #212121;
+            --border-color: #e0e0e0;
+            --shadow-color: #d1d1d1;
+            
+            /* Highlighter Colors */
+            --highlight-yellow: #fef08a;
+            --highlight-pink: #fbcfe8;
+            --highlight-blue: #bae6fd;
+            --highlight-green: #bbf7d0;
+            --highlight-purple: #e9d5ff;
+
+            --brand-blue: #0a4a90;
+            --brand-green: #15803d;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-doodle);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 2rem;
+            font-size: 1.1rem; /* Base size for doodle font */
+            min-height: 100vh; /* Make body fill the viewport */
+            display: flex; /* Use flex to help center content */
+            flex-direction: column;
+        }
+
+        .slide-container {
+            max-width: 1920px;
+            margin: 0 auto;
+            flex-grow: 1; /* Allow container to grow */
+            display: flex; /* Use flex for internal layout */
+            flex-direction: column;
+            width: 100%; /* Ensure it takes full width */
+        }
+
+        /* --- Main Title --- */
+        .main-title {
+            text-align: center;
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: var(--brand-blue);
+            margin-bottom: 2rem;
+            /* "Highlighter" underline effect */
+            display: inline-block;
+            position: relative;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .main-title::after {
+            content: '';
+            position: absolute;
+            bottom: 10px;
+            left: -5%;
+            width: 110%;
+            height: 15px;
+            background-color: var(--highlight-yellow);
+            z-index: -1;
+            border-radius: 4px;
+            transform: skew(-15deg);
+        }
+
+        /* --- Grid Layout --- */
+        .grid-container {
+            display: grid;
+            /* Create a 3-column grid */
+            grid-template-columns: repeat(3, 1fr);
+            /* Define row heights */
+            grid-auto-rows: minmax(250px, auto);
+            gap: 1.5rem;
+            flex-grow: 1; /* Make grid fill the available space */
+        }
+
+        .grid-item {
+            background-color: var(--card-bg);
+            border: 2px solid var(--border-color);
+            padding: 1.5rem;
+            /* Subtle hand-drawn box effect */
+            border-radius: 8px 10px 9px 11px;
+            box-shadow: 4px 4px 0px var(--shadow-color);
+            transition: all 0.2s ease-in-out;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .grid-item:hover {
+            transform: translate(-3px, -3px);
+            box-shadow: 7px 7px 0px var(--shadow-color);
+        }
+
+        .grid-item h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 3px dotted var(--border-color);
+        }
+
+        /* --- Individual Grid Item Styling --- */
+        
+        /* 1. Problem */
+        .problem h2 { color: #d946ef; }
+        .problem { background-color: #faf5ff; } /* Light purple */
+        .problem ul { list-style-type: none; padding-left: 0.5rem; }
+        .problem li { padding-left: 0.5rem; margin-bottom: 0.75rem; font-weight: 700; font-size: 2rem; }
+        
+        .problem .severity-note {
+            background: #fff;
+            border: 2px dashed #d946ef;
+            padding: 0.75rem 1rem;
+            margin-top: 1rem;
+            border-radius: 8px;
+        }
+        .problem .severity-note strong {
+            display: block;
+            font-size: 1.2rem;
+            color: #c026d3;
+        }
+        .problem .severity-note p {
+            font-size: 2.5rem;
+            font-weight: 400;
+            font-family: var(--font-sans); /* Clearer text */
+        }
+
+        /* 2. Customer Discovery */
+        .discovery h2 { color: #db2777; }
+        .discovery { background-color: #fff1f2; } /* Light pink */
+        .discovery ul { list-style-type: '👥'; padding-left: 1.5rem; }
+        .discovery li { padding-left: 0.5rem; margin-bottom: 0.5rem; }
+        .discovery li strong {
+            font-weight: 700;
+        }
+
+        /* 3. Solution (The Big One) */
+        .solution {
+            /* Span 2 columns and 2 rows */
+            grid-column: span 1;
+            grid-row: span 2;
+            background-color: #fffbeb; /* Light yellow */
+            border-color: #facc15;
+        }
+        .solution h2 { color: #ca8a04; }
+        
+        .solution-content {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .solution-header {
+            text-align: center;
+        }
+        
+        .solution-body {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .qr-code {
+            text-align: center;
+            margin: 1rem 0;
+            background: #fff;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 2px dashed var(--border-color);
+        }
+        .qr-code img {
+            width: 150px;
+            height: 150px;
+            display: block;
+            margin: 0 auto;
+        }
+        .qr-code p {
+            font-weight: 700;
+            font-size: 2.5rem;
+            margin-top: 0.5rem;
+            color: var(--brand-blue);
+        }
+
+        .features-list {
+            /* Use columns to save space */
+            columns: 2;
+            column-gap: 1.5rem;
+            list-style-type: none; /* Remove default bullets */
+            padding-left: 0.5rem;
+            font-size: 1rem; /* Slightly smaller for legibility */
+            flex-grow: 1;
+            font-weight: 700; /* Make features bold */
+        }
+        .features-list li {
+            padding-left: 0.5rem;
+            margin-bottom: 0.75rem; /* Increase spacing a bit */
+            break-inside: avoid-column;
+        }
+
+        /* 4. Go-To-Market */
+        .gtm p { font-size: 2.5rem; }
+        .gtm h2 { color: #059669; }
+        .gtm { background-color: #f0fdf4; } /* Light green */
+        .gtm ul { list-style-type: none; padding-left: 0.5rem; }
+        .gtm li { padding-left: 0.5rem; margin-bottom: 0.5rem; }
+        .gtm li strong {
+            font-weight: 700;
+        }
+
+        /* 5. Unit Economics */
+        .economics h2 { color: #15803d; }
+        .economics { background-color: #f0fdf4; } /* Light green */
+        .economics p {
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+            font-weight: 400;
+        }
+        .economics strong {
+            font-weight: 700;
+            color: #166534;
+        }
+        .economics .ltv-ratio {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #15803d;
+            text-align: center;
+            margin-top: 1rem;
+            background: var(--highlight-green);
+            padding: 0.5rem;
+            border-radius: 8px;
+        }
+
+        /* 6. Business Model */
+        .biz-model h2 { color: #0284c7; }
+        .biz-model { background-color: #f0f9ff; } /* Light blue */
+        .biz-model p { margin-bottom: 1rem; }
+        .biz-model strong {
+            font-weight: 700;
+        }
+        .biz-model .differentiator strong {
+            color: var(--brand-blue);
+        }
+
+        /* 7. Market Analysis */
+        .market h2 { color: #ca8a04; }
+        .market { background-color: #fefce8; } /* Light cream */
+        
+        .market-circles {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+            flex-grow: 1;
+        }
+        .circle {
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-weight: 700;
+            padding: 1rem;
+            line-height: 1.3;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            /* Use Inter for clear numbers */
+            font-family: var(--font-sans); 
+        }
+        .circle span {
+            font-family: var(--font-doodle); /* Title in doodle font */
+            font-size: 1.8rem;
+            display: block;
+            font-weight: 700;
+        }
+        .tam { background-color: #fef08a; color: #a16207; border: 4px solid #facc15; }
+        .sam { background-color: #fef9c3; color: #a16207; border: 4px solid #fde047; }
+        .som { background-color: #fefce8; color: #a16207; border: 4px solid #fef08a; }
+
+        /* --- Image container style --- */
+        .content-image {
+            width: 50%; /* Make image responsive */
+            height: auto; /* Maintain aspect ratio */
+            border-radius: 8px;
+            margin-top: 1rem;
+            border: 2px dashed var(--border-color); /* Added a little border */
+            padding: 5px; /* Padding inside the border */
+        }
+
+        /* --- Footer --- */
+        .team-footer {
+            text-align: center;
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: var(--card-bg);
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+        }
+        .team-footer h3 {
+            font-size: 1.5rem;
+            color: #555;
+            font-weight: 400;
+        }
+        .team-footer p {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--brand-blue);
+        }
+
+        /* --- Responsive Design --- */
+        @media (max-width: 1400px) {
+            .grid-container {
+                /* Switch to 2 columns */
+                grid-template-columns: 1fr 1fr;
+            }
+            /* Make solution span full width */
+            .solution {
+                grid-column: 1 / -1;
+                grid-row: span 1; /* Reset row span */
+            }
+            .solution-body {
+                flex-direction: row;
+                align-items: flex-start;
+                gap: 1.5rem;
+            }
+            .features-list {
+                columns: 2;
+                flex-basis: 60%; /* Give more space to features */
+            }
+            .qr-code {
+                flex-basis: 35%;
+                margin: 0;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 1rem; }
+            .grid-container {
+                /* Stack to 1 column */
+                grid-template-columns: 1fr;
+            }
+            .main-title { font-size: 2.5rem; }
+            .grid-item h2 { font-size: 1.8rem; }
+            .solution-body {
+                flex-direction: column;
+            }
+            .features-list {
+                columns: 2;
+                font-size: 0.95rem;
+            }
+            .market-circles {
+                flex-direction: row; /* Keep them in a row */
+                gap: 1rem;
+            }
+            .circle {
+                width: 140px;
+                height: 140px;
+                font-size: 0.9rem;
+            }
+            .circle span { font-size: 1.5rem; }
+        }
+
+        @media (max-width: 480px) {
+            .features-list {
+                columns: 1; /* Single column for features */
+            }
+            .market-circles {
+                flex-direction: column; /* Stack circles on smallest screens */
+                gap: 1rem;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="slide-container">
+        
+        <!-- Main Title -->
+        <h1 class="main-title">Doodle Digest – Making Research Simple</h1>
+
+        <!-- 7-Block Grid -->
+        <div class="grid-container">
+
+            <!-- 1. The Problem -->
+            <div class="grid-item problem">
+                <h2>💡The Problem</h2>
+                <p>Academic research and complex STEM materials are <strong>dense, jargon-filled, and incredibly time-consuming.</strong> This leads to information overload, slows down literature reviews (costing 5-10 hours per week), and results in poor retention of key concepts for students and early researchers.</p>
+            </div>
+
+            <!-- 2. Customer Discovery -->
+            <div class="grid-item discovery">
+                <h2>👥 Customer Discovery</h2>
+                <img src="cus.jpeg" alt="Quantification and Market Analysis" class="content-image">
+
+                <ul>
+                    <li>💡 <strong>Key Insight:</strong> A universal high-demand need for <strong>faster literature digestion</strong> and <strong>simplified visual figures.</strong></li>
+                    <li>✅ <strong>Validation:</strong> Strong subscription interest from researchers</li>
+                </ul>
+            </div>
+
+            <!-- 3. Our Solution (The Big One) -->
+            <div class="grid-item solution">
+                <div class="solution-content">
+                    <div class="solution-header">
+                        <h2>✨ Our Solution (Product Development)</h2>
+                        <p><strong>Doodle Digest: The All-in-One Solution for Early Researchers.</strong><br> Our MVP is live and hosted. We transform dense papers into clear, memorable visual summaries.</p>
+                    </div>
+
+                    <div class="solution-body">
+                        <!-- QR Code -->
+                        <div class="qr-code">
+                            <img src="qrcode_276029750_2f9a61f74eb747ee321bee8a1eb2c16c.png" alt="QR Code for Doodle Digest MVP">
+                            <p>Scan to try our live MVP</p>
+                        </div>
+
+                        <!-- Features -->
+                        <ul class="features-list">
+                            <li>✨ Instant AI Summaries</li>
+                            <li>🎨 AI-Generated Doodles</li>
+                            <li>🖥️ Interactive Learning</li>
+                            <li>📌 Personal "Sticky Notes"</li>
+                            <li>🧠 The "Memory Board"</li>
+                            <li>✍️ The "Writing Wizard"</li>
+                            <li>❓ Auto-Generated Quizzes</li>
+                            <li>📖 Discover "Storyfy" Mode</li>
+                            <li>📊 Personal Dashboard</li>
+                            <li>🤝 Collaborative Groups</li>
+                            <li>📎 Multi-Source Import</li>
+                            <li>📤 Share & Export</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Go-To-Market -->
+            <div class="grid-item gtm">
+                <h2>🚀 Go-To-Market</h2>
+                <ul>
+                    <li>🏫 <strong>B2B (Institutions):</strong> Direct outreach and free pilot programs for premium schools and universities (starting in Powai).</li>
+                    <li>📣 <strong>B2B2C (Advocacy):</strong> Engage campus clubs, teacher ambassadors, and Olympiad mentors to drive adoption.</li>
+                    <li>📱 <strong>B2C (Students/Researchers):</strong> Viral "Paper to Doodle" explainers (Instagram/YouTube) and community building on Discord/Reddit.</li>
+                </ul>
+            </div>
+            <div class="grid-item problem">
+                <h2>💡 The Problem</h2>
+                <p style="font-size: large;">Dense, Jargon-filled Research Papers/Books lead to Slower Learning, Info Overload, and Poor Retention.</p>
+                
+                <div class="severity-note">
+                    <strong>Why is this a severe problem?</strong>
+                    <img src="problem_severity.png" alt="Severity of the Problem">
+                </div>
+            </div>
+            <!-- 5. Unit Economics -->
+            
+            <div class="grid-item economics">
+                <h2>💰Unit Economics</h2>
+                <!-- Replace 'unit_economics.png' with your local image file name -->
+                <img src="unit_economics.png" alt="Unit Economics"  class="content-image">
+            </div>
+            <!-- 6. Business Modelling & Competitors -->
+            <div class="grid-item biz-model">
+                <h2>⚙️ Business Modelling & Competitors</h2>
+                <p>📈 <strong>Business Model:</strong> A hybrid model.
+                    <br>• <strong>B2C:</strong> Freemium app with a Pro plan (₹299/month).
+                    <br>• <strong>B2B:</strong> Annual institutional SaaS licenses (₹15k-25k/class/month).
+                </p>
+                <p>🥊 <strong>Competitors:</strong></p>
+                <img src="competitors.png" alt="Competitor Analysis" class="content-image">
+                <p class="differentiator">⭐ <strong>Our Differentiator:</strong> While competitors offer generic summarization <br> or search, <strong>Doodle Digest is the only platform that combines<br>  AI summarization with a unique, visual doodle pedagogy</strong></p>
+            </div>
+
+            <!-- 7. Market Analysis -->
+            <div class="grid-item market">
+                <h2>📊 Quantification & Market Analysis</h2>
+                <!-- Replace 'market_analysis.png' with your local image file name -->
+                <img src="market_analysis.png" alt="Quantification and Market Analysis" class="content-image">
+            </div>
+            
+
+        </div> <!-- End Grid Container -->
+
+        <!-- Footer -->
+        <footer class="team-footer">
+            <h3>🧑‍💻 Team 🧑‍💻</h3>
+            <p>Abhay Chandra | Pritesh Dhakate</p>
+        </footer>
+
+    </div> <!-- End Slide Container -->
+
+</body>
+</html>
