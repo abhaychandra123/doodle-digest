@@ -176,6 +176,172 @@
       .story-content li {
         margin-bottom: 0.5rem;
       }
+      
+      /* ========================================
+         NEW: Premium UI Enhancements
+         ======================================== */
+      
+      /* Animated gradient background */
+      @keyframes gradient-shift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+      
+      .gradient-bg {
+        background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #f5576c);
+        background-size: 400% 400%;
+        animation: gradient-shift 12s ease infinite;
+      }
+      
+      .dark .gradient-bg {
+        background: linear-gradient(-45deg, #1a1a2e, #16213e, #0f3460, #1a1a2e);
+        background-size: 400% 400%;
+        animation: gradient-shift 12s ease infinite;
+      }
+      
+      /* Glassmorphism */
+      .glass {
+        background: rgba(255, 255, 255, 0.75);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+      }
+      
+      .dark .glass {
+        background: rgba(30, 30, 30, 0.75);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      
+      /* Subtle glow effects */
+      .glow-indigo {
+        box-shadow: 0 0 40px -8px rgba(99, 102, 241, 0.6);
+      }
+      
+      .dark .glow-indigo {
+        box-shadow: 0 0 40px -8px rgba(129, 140, 248, 0.4);
+      }
+      
+      /* Smooth entrance animation */
+      @keyframes fade-in-up {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
+      .animate-fade-in {
+        animation: fade-in-up 0.5s ease-out forwards;
+      }
+      
+      /* Staggered children animation */
+      .stagger-children > *:nth-child(1) { animation-delay: 0.05s; }
+      .stagger-children > *:nth-child(2) { animation-delay: 0.1s; }
+      .stagger-children > *:nth-child(3) { animation-delay: 0.15s; }
+      .stagger-children > *:nth-child(4) { animation-delay: 0.2s; }
+      .stagger-children > *:nth-child(5) { animation-delay: 0.25s; }
+      
+      /* Modern input styling */
+      .input-modern {
+        transition: all 0.2s ease;
+        background: rgba(255, 255, 255, 0.9);
+        border: 1.5px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+        font-size: 0.95rem;
+        color: #1f2937;
+        width: 100%;
+      }
+      
+      .input-modern:focus {
+        outline: none;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        background: #ffffff;
+      }
+      
+      .dark .input-modern {
+        background: rgba(30, 30, 30, 0.8);
+        border-color: #374151;
+        color: #f9fafb;
+      }
+      
+      .dark .input-modern:focus {
+        border-color: #818cf8;
+        box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.15);
+        background: rgba(30, 30, 30, 0.95);
+      }
+      
+      /* Modern button */
+      .btn-gradient {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        font-weight: 600;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 14px rgba(102, 126, 234, 0.3);
+      }
+      
+      .btn-gradient:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+      }
+      
+      .btn-gradient:active {
+        transform: translateY(0);
+      }
+      
+      .btn-gradient:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+      
+      /* Card hover lift */
+      .card-lift {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      
+      .card-lift:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+      }
+      
+      .dark .card-lift:hover {
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+      }
+      
+      /* Floating decorative elements */
+      @keyframes float {
+        0%, 100% { transform: translateY(0) rotate(0deg); }
+        50% { transform: translateY(-15px) rotate(5deg); }
+      }
+      
+      .float-animation {
+        animation: float 6s ease-in-out infinite;
+      }
+      
+      /* Shimmer loading effect */
+      @keyframes shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+      }
+      
+      .shimmer {
+        background: linear-gradient(90deg, 
+          rgba(255,255,255,0) 0%, 
+          rgba(255,255,255,0.4) 50%, 
+          rgba(255,255,255,0) 100%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+      }
     </style>
     <!-- pdf.js (for reading) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>

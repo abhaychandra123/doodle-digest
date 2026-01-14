@@ -46,19 +46,19 @@ const loadingMonthlyData: ChartData[] = [{ label: 'J', value: 0 }];
 // --- DELETED: Mock data arrays (dailyData, weeklyData, monthlyData) are gone ---
 
 const QuickAction: React.FC<{ icon: React.ReactNode; title: string; description: string; onClick: () => void; }> = ({ icon, title, description, onClick }) => (
-    <button
-      onClick={onClick}
-      className="bg-white dark:bg-[#1E1E1E] p-4 rounded-xl shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 text-left flex items-start gap-4 w-full border border-gray-200 dark:border-gray-700"
-    >
-      <div className="flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400">
-        {icon}
-      </div>
-      <div>
-        <h3 className="font-bold text-black dark:text-white">{title}</h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{description}</p>
-      </div>
-    </button>
-  );
+  <button
+    onClick={onClick}
+    className="bg-white dark:bg-[#1E1E1E] p-5 rounded-2xl shadow-sm card-lift text-left flex items-start gap-4 w-full border border-gray-100 dark:border-gray-800 group"
+  >
+    <div className="flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/25 group-hover:scale-110 transition-transform duration-300">
+      {icon}
+    </div>
+    <div>
+      <h3 className="font-bold text-black dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{title}</h3>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{description}</p>
+    </div>
+  </button>
+);
 
 // --- NEW: Chart loading component ---
 const ChartLoader: React.FC = () => (
@@ -71,7 +71,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   user,
   documents,
   tasks,
-  activities, 
+  activities,
   stats, // --- NEW: Destructure stats ---
   onStartNew,
   onViewDocument,
@@ -86,7 +86,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 }) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  
+
   const [focusText, setFocusText] = useState('Review one note from last week to strengthen your memory recall!');
   const [isEditingFocus, setIsEditingFocus] = useState(false);
   const [editedFocusText, setEditedFocusText] = useState(focusText);
@@ -119,7 +119,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       <main className="flex-1 h-full overflow-y-auto bg-white dark:bg-[#121212] p-6 lg:p-8 relative">
         <DoodleProtractorIcon className="absolute -top-10 -right-10 w-48 h-48 text-gray-200/50 dark:text-gray-900/20 transform rotate-12 -z-0 pointer-events-none" />
         <DoodleCompassIcon className="absolute -bottom-12 -left-12 w-48 h-48 text-gray-200/50 dark:text-gray-900/20 transform -rotate-12 -z-0 pointer-events-none" />
-        
+
         <div className="relative z-10">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-black dark:text-white">
@@ -129,89 +129,89 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               {currentDate}
             </p>
           </div>
-          
+
           <div className="space-y-8">
             {/* Quick Actions */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <QuickAction 
-                  icon={<PlusIcon className="w-6 h-6" />}
-                  title="New Summary"
-                  description="Analyze a new paper or document."
-                  onClick={onStartNew}
-                />
-                 <QuickAction 
-                  icon={<PencilAltIcon className="w-6 h-6" />}
-                  title="Writing Wizard"
-                  description="Draft & refine papers with AI help."
-                  onClick={onNavigateToWritingWizard}
-                />
-                <QuickAction 
-                  icon={<MemoryIcon className="w-6 h-6" />}
-                  title="Review Notes"
-                  description="Visit your memory board of notes."
-                  onClick={onNavigateToMemory}
-                />
-                <QuickAction 
-                  icon={<BookOpenIcon className="w-6 h-6" />}
-                  title="Create a Story"
-                  description="Discover the creators behind a paper."
-                  onClick={onNavigateToStoryfy}
-                />
+              <QuickAction
+                icon={<PlusIcon className="w-6 h-6" />}
+                title="New Summary"
+                description="Analyze a new paper or document."
+                onClick={onStartNew}
+              />
+              <QuickAction
+                icon={<PencilAltIcon className="w-6 h-6" />}
+                title="Writing Wizard"
+                description="Draft & refine papers with AI help."
+                onClick={onNavigateToWritingWizard}
+              />
+              <QuickAction
+                icon={<MemoryIcon className="w-6 h-6" />}
+                title="Review Notes"
+                description="Visit your memory board of notes."
+                onClick={onNavigateToMemory}
+              />
+              <QuickAction
+                icon={<BookOpenIcon className="w-6 h-6" />}
+                title="Create a Story"
+                description="Discover the creators behind a paper."
+                onClick={onNavigateToStoryfy}
+              />
             </div>
 
             {/* Today's Focus & Tasks */}
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                <div className="relative bg-white dark:bg-transparent p-4 rounded-xl shadow-sm transform -rotate-1 border-2 border-dashed border-amber-500/50 dark:border-amber-300/30 xl:col-span-1 group">
-                    <PinIcon className="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-8 text-red-500 drop-shadow-sm" />
-                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <SparklesIcon className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                            <h3 className="font-doodle text-lg font-bold text-black dark:text-white">Focus of the Day</h3>
-                        </div>
-                        {!isEditingFocus && (
-                            <button 
-                                onClick={() => {
-                                    setEditedFocusText(focusText);
-                                    setIsEditingFocus(true);
-                                }} 
-                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10"
-                                aria-label="Edit focus of the day"
-                            >
-                                <PencilIcon className="w-4 h-4 text-black/70 dark:text-white/70" />
-                            </button>
-                        )}
-                    </div>
+              <div className="relative bg-white dark:bg-transparent p-4 rounded-xl shadow-sm transform -rotate-1 border-2 border-dashed border-amber-500/50 dark:border-amber-300/30 xl:col-span-1 group">
+                <PinIcon className="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-8 text-red-500 drop-shadow-sm" />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <SparklesIcon className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                    <h3 className="font-doodle text-lg font-bold text-black dark:text-white">Focus of the Day</h3>
+                  </div>
+                  {!isEditingFocus && (
+                    <button
+                      onClick={() => {
+                        setEditedFocusText(focusText);
+                        setIsEditingFocus(true);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10"
+                      aria-label="Edit focus of the day"
+                    >
+                      <PencilIcon className="w-4 h-4 text-black/70 dark:text-white/70" />
+                    </button>
+                  )}
+                </div>
 
-                    {isEditingFocus ? (
-                        <div className="mt-2">
-                            <textarea
-                                value={editedFocusText}
-                                onChange={(e) => setEditedFocusText(e.target.value)}
-                                className="w-full font-doodle text-base bg-transparent border border-gray-500/50 rounded-md p-1 focus:outline-none focus:ring-1 focus:ring-amber-500 resize-none text-black dark:text-white"
-                                rows={3}
-                                autoFocus
-                            />
-                            <div className="flex justify-end gap-2 mt-2">
-                                <button onClick={handleFocusCancel} className="text-xs font-semibold text-black dark:text-white px-2 py-1 rounded-md hover:bg-black/5 dark:hover:bg-white/5">Cancel</button>
-                                <button onClick={handleFocusSave} className="text-xs font-semibold px-3 py-1 bg-amber-400 text-amber-900 rounded-md hover:bg-amber-500">Save</button>
-                            </div>
-                        </div>
-                    ) : (
-                        <p className="font-doodle text-base text-black dark:text-white mt-2 min-h-[72px]">
-                            {focusText}
-                        </p>
-                    )}
-                </div>
-                <div className="xl:col-span-2">
-                    <DailyTasks 
-                      tasks={tasks}
-                      onAddTask={onAddTask}
-                      onToggleTask={onToggleTask}
-                      onDeleteTask={onDeleteTask}
+                {isEditingFocus ? (
+                  <div className="mt-2">
+                    <textarea
+                      value={editedFocusText}
+                      onChange={(e) => setEditedFocusText(e.target.value)}
+                      className="w-full font-doodle text-base bg-transparent border border-gray-500/50 rounded-md p-1 focus:outline-none focus:ring-1 focus:ring-amber-500 resize-none text-black dark:text-white"
+                      rows={3}
+                      autoFocus
                     />
-                </div>
+                    <div className="flex justify-end gap-2 mt-2">
+                      <button onClick={handleFocusCancel} className="text-xs font-semibold text-black dark:text-white px-2 py-1 rounded-md hover:bg-black/5 dark:hover:bg-white/5">Cancel</button>
+                      <button onClick={handleFocusSave} className="text-xs font-semibold px-3 py-1 bg-amber-400 text-amber-900 rounded-md hover:bg-amber-500">Save</button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="font-doodle text-base text-black dark:text-white mt-2 min-h-[72px]">
+                    {focusText}
+                  </p>
+                )}
+              </div>
+              <div className="xl:col-span-2">
+                <DailyTasks
+                  tasks={tasks}
+                  onAddTask={onAddTask}
+                  onToggleTask={onToggleTask}
+                  onDeleteTask={onDeleteTask}
+                />
+              </div>
             </div>
-            
+
             {/* Progress Section */}
             <div>
               <h2 className="text-2xl font-bold text-black dark:text-white mb-4">Progress Overview</h2>
@@ -229,7 +229,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                     darkBackgroundColor="rgba(239, 68, 68, 0.15)"
                   />
                 ) : <ChartLoader />}
-                
+
                 {stats ? (
                   <ProgressChart
                     title="Weekly Progress"

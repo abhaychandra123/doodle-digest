@@ -3,9 +3,9 @@ import 'react/jsx-runtime';
 import { AppView, SummarizerView, User, Document, WritingDocument, Task, GroupDraft, Activity, AppStats } from './types';
 // --- NEW: Import the refactored services ---
 import {
-    processFileOnBackend,
-    generateCreatorStory,
-    suggestImprovements
+  processFileOnBackend,
+  generateCreatorStory,
+  suggestImprovements
 } from './services/aiService';
 import FileUploadView from './components/FileUploadView';
 import ProcessingView from './components/ProcessingView';
@@ -37,7 +37,7 @@ const App: React.FC = () => {
   const [scrollTarget, setScrollTarget] = useState<{ docId: string; pageNumber: number } | null>(null);
   const [writingDocuments, setWritingDocuments] = useState<WritingDocument[]>([]);
   const [activeWritingDocumentId, setActiveWritingDocumentId] = useState<string | null>(null);
-  const [tasks, setTasks] = useState<Task[]>([]); 
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [stats, setStats] = useState<AppStats | null>(null);
 
@@ -68,7 +68,7 @@ const App: React.FC = () => {
           if (!userRes.ok) throw new Error('Invalid token');
           const userData = await userRes.json();
           setCurrentUser(userData);
-          setView(AppView.DASHBOARD); 
+          setView(AppView.DASHBOARD);
 
           await Promise.all([
             fetch(`${API_URL}/documents`, { headers: { 'x-auth-token': token } })
@@ -78,14 +78,14 @@ const App: React.FC = () => {
               .then(res => res.ok ? res.json() : [])
               .then(writingDocsData => setWritingDocuments(writingDocsData)),
             fetch(`${API_URL}/tasks`, { headers: { 'x-auth-token': token } })
-               .then(res => res.ok ? res.json() : [])
-               .then(tasksData => setTasks(tasksData)),
+              .then(res => res.ok ? res.json() : [])
+              .then(tasksData => setTasks(tasksData)),
             fetch(`${API_URL}/activities`, { headers: { 'x-auth-token': token } })
-                .then(res => res.ok ? res.json() : [])
-                .then(activitiesData => setActivities(activitiesData)),
+              .then(res => res.ok ? res.json() : [])
+              .then(activitiesData => setActivities(activitiesData)),
             fetch(`${API_URL}/stats`, { headers: { 'x-auth-token': token } })
-                .then(res => res.ok ? res.json() : null)
-                .then(statsData => setStats(statsData))
+              .then(res => res.ok ? res.json() : null)
+              .then(statsData => setStats(statsData))
           ]);
 
         } catch (error) {
@@ -102,9 +102,9 @@ const App: React.FC = () => {
       };
       fetchInitialData();
     } else {
-        setView(AppView.LOGIN);
+      setView(AppView.LOGIN);
     }
-  }, [getAuthToken]); 
+  }, [getAuthToken]);
 
 
   // --- Auth Handlers ---
@@ -121,7 +121,7 @@ const App: React.FC = () => {
 
       localStorage.setItem('token', data.token);
 
-      const fullUserRes = await fetch(`${API_URL}/auth/user`, { headers: { 'x-auth-token': data.token }});
+      const fullUserRes = await fetch(`${API_URL}/auth/user`, { headers: { 'x-auth-token': data.token } });
       if (!fullUserRes.ok) throw new Error('Failed to fetch user data after registration');
       const fullUserData = await fullUserRes.json();
       setCurrentUser(fullUserData);
@@ -129,7 +129,7 @@ const App: React.FC = () => {
       setDocuments([]);
       setWritingDocuments([]);
       setTasks([]);
-      setActivities([]); 
+      setActivities([]);
       setStats(null);
 
       setView(AppView.CREATE_PROFILE);
@@ -138,10 +138,10 @@ const App: React.FC = () => {
       setError(err.message);
       return { success: false, message: err.message };
     }
-  }, []); 
+  }, []);
 
   const handleLogin = useCallback(async (email: string, password: string): Promise<{ success: boolean, message: string }> => {
-    setError(''); 
+    setError('');
     try {
       const res = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
@@ -155,12 +155,12 @@ const App: React.FC = () => {
       const token = data.token;
 
       const [userRes, docsRes, writingDocsRes, tasksRes, activitiesRes, statsRes] = await Promise.all([
-         fetch(`${API_URL}/auth/user`, { headers: { 'x-auth-token': token } }),
-         fetch(`${API_URL}/documents`, { headers: { 'x-auth-token': token } }),
-         fetch(`${API_URL}/writing`, { headers: { 'x-auth-token': token } }),
-         fetch(`${API_URL}/tasks`, { headers: { 'x-auth-token': token } }),
-         fetch(`${API_URL}/activities`, { headers: { 'x-auth-token': token } }),
-         fetch(`${API_URL}/stats`, { headers: { 'x-auth-token': token } })
+        fetch(`${API_URL}/auth/user`, { headers: { 'x-auth-token': token } }),
+        fetch(`${API_URL}/documents`, { headers: { 'x-auth-token': token } }),
+        fetch(`${API_URL}/writing`, { headers: { 'x-auth-token': token } }),
+        fetch(`${API_URL}/tasks`, { headers: { 'x-auth-token': token } }),
+        fetch(`${API_URL}/activities`, { headers: { 'x-auth-token': token } }),
+        fetch(`${API_URL}/stats`, { headers: { 'x-auth-token': token } })
       ]);
 
       if (!userRes.ok) throw new Error('Failed to fetch user data after login');
@@ -170,7 +170,7 @@ const App: React.FC = () => {
       setDocuments(docsRes.ok ? await docsRes.json() : []);
       setWritingDocuments(writingDocsRes.ok ? await writingDocsRes.json() : []);
       setTasks(tasksRes.ok ? await tasksRes.json() : []);
-      setActivities(activitiesRes.ok ? await activitiesRes.json() : []); 
+      setActivities(activitiesRes.ok ? await activitiesRes.json() : []);
       setStats(statsRes.ok ? await statsRes.json() : null);
 
       setView(AppView.DASHBOARD);
@@ -179,25 +179,51 @@ const App: React.FC = () => {
       setError(err.message);
       return { success: false, message: err.message };
     }
-  }, []); 
+  }, []);
 
   const handleForgotPassword = useCallback(async (email: string): Promise<{ success: boolean, message: string }> => {
-      setError('');
-      if (!email) return { success: false, message: 'Please enter your email.' };
-      console.log(`(Simulated) Password reset request sent for: ${email}`);
-      setPasswordResetEmail(email); 
-      alert(`(Simulated) If an account exists for ${email}, reset instructions (or OTP) have been sent.`);
-      return { success: true, message: 'Password reset initiated.' };
+    setError('');
+    if (!email) return { success: false, message: 'Please enter your email.' };
+
+    try {
+      const res = await fetch(`${API_URL}/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.msg || 'Failed to send reset code');
+
+      setPasswordResetEmail(email);
+      return { success: true, message: data.msg || 'If an account exists, a reset code has been sent.' };
+    } catch (err: any) {
+      setError(err.message);
+      return { success: false, message: err.message };
+    }
   }, []);
 
   const handleResetPassword = useCallback(async (otp: string, newPassword: string): Promise<{ success: boolean, message: string }> => {
-      setError('');
-      if (!passwordResetEmail) return { success: false, message: 'Password reset process not started or email missing.'};
-      console.log(`(Simulated) Resetting password for ${passwordResetEmail} with OTP ${otp}`);
+    setError('');
+    if (!passwordResetEmail) return { success: false, message: 'Password reset process not started or email missing.' };
+
+    try {
+      const res = await fetch(`${API_URL}/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: passwordResetEmail, otp, newPassword }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.msg || 'Failed to reset password');
+
       setPasswordResetEmail(null);
-      setView(AppView.LOGIN); 
-      alert('(Simulated) Password has been reset. Please log in.');
-      return { success: true, message: 'Password reset successful.' };
+      setView(AppView.LOGIN);
+      return { success: true, message: data.msg || 'Password reset successful!' };
+    } catch (err: any) {
+      setError(err.message);
+      return { success: false, message: err.message };
+    }
   }, [passwordResetEmail]);
 
   const handleLogout = useCallback(() => {
@@ -207,12 +233,12 @@ const App: React.FC = () => {
     setDocuments([]);
     setWritingDocuments([]);
     setTasks([]);
-    setActivities([]); 
+    setActivities([]);
     setStats(null);
     setActiveDocument(null);
     setError('');
     setView(AppView.LOGIN);
-  }, []); 
+  }, []);
 
   // --- Profile Handlers ---
   const handleProfileCreate = useCallback(async (fullName: string, status: string) => {
@@ -222,53 +248,53 @@ const App: React.FC = () => {
     if (!token) return handleLogout();
 
     try {
-        const res = await fetch(`${API_URL}/profile`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
-            body: JSON.stringify({ fullName, status }), 
-        });
-        if (!res.ok) throw new Error('Failed to update profile');
-        const updatedUser = await res.json();
-        setCurrentUser(updatedUser);
-        setView(AppView.DASHBOARD);
-        setActivities(prev => [{
-            _id: `activity-${Date.now()}`,
-            userId: currentUser.id,
-            icon: 'profile',
-            text: 'Profile created!',
-            createdAt: new Date().toISOString()
-        }, ...prev]);
+      const res = await fetch(`${API_URL}/profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+        body: JSON.stringify({ fullName, status }),
+      });
+      if (!res.ok) throw new Error('Failed to update profile');
+      const updatedUser = await res.json();
+      setCurrentUser(updatedUser);
+      setView(AppView.DASHBOARD);
+      setActivities(prev => [{
+        _id: `activity-${Date.now()}`,
+        userId: currentUser.id,
+        icon: 'profile',
+        text: 'Profile created!',
+        createdAt: new Date().toISOString()
+      }, ...prev]);
     } catch (err: any) {
-        setError(err.message);
+      setError(err.message);
     }
   }, [currentUser, getAuthToken, handleLogout]);
 
   const handleUpdateProfile = useCallback(async (updatedUserData: Partial<User>) => {
-      setError('');
-      if (!currentUser) return;
-      const token = getAuthToken();
-      if (!token) return handleLogout();
+    setError('');
+    if (!currentUser) return;
+    const token = getAuthToken();
+    if (!token) return handleLogout();
 
-      const previousUser = currentUser;
-      setCurrentUser(prev => ({ ...prev!, ...updatedUserData }));
+    const previousUser = currentUser;
+    setCurrentUser(prev => ({ ...prev!, ...updatedUserData }));
 
-      try {
-          const res = await fetch(`${API_URL}/profile`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
-              body: JSON.stringify({ 
-                  fullName: updatedUserData.fullName,
-                  status: updatedUserData.status,
-                  integrations: updatedUserData.integrations
-              }),
-          });
-          if (!res.ok) throw new Error('Failed to update profile');
-          const finalUser = await res.json();
-          setCurrentUser(finalUser);
-      } catch (err: any) {
-          setError(err.message);
-          setCurrentUser(previousUser);
-      }
+    try {
+      const res = await fetch(`${API_URL}/profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+        body: JSON.stringify({
+          fullName: updatedUserData.fullName,
+          status: updatedUserData.status,
+          integrations: updatedUserData.integrations
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to update profile');
+      const finalUser = await res.json();
+      setCurrentUser(finalUser);
+    } catch (err: any) {
+      setError(err.message);
+      setCurrentUser(previousUser);
+    }
   }, [currentUser, getAuthToken, handleLogout]);
 
   // --- Navigation Handlers ---
@@ -282,7 +308,7 @@ const App: React.FC = () => {
   const handleViewDocument = useCallback((docId: string, options?: { pageNumber?: number }) => {
     const doc = documents.find(d => (d.id || (d as any)._id) === docId);
     if (doc) {
-      const actualId = doc.id || (doc as any)._id; 
+      const actualId = doc.id || (doc as any)._id;
       setActiveDocument(doc);
       if (options?.pageNumber) {
         setScrollTarget({ docId: actualId, pageNumber: options.pageNumber });
@@ -318,30 +344,30 @@ const App: React.FC = () => {
     if (!token) return handleLogout();
 
     try {
-        const res = await fetch(`${API_URL}/groups`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
-            body: JSON.stringify(groupDraft),
-        });
-        if (!res.ok) {
-            const errorData = await res.json();
-            throw new Error(errorData.msg || 'Failed to save group');
-        }
-        const savedGroup = await res.json(); 
-        setActivities(prev => [
-            {
-                _id: `activity-${Date.now()}`,
-                userId: savedGroup.ownerId,
-                icon: 'group',
-                text: `Created a new group: ${savedGroup.name}`,
-                createdAt: new Date().toISOString()
-            },
-            ...prev
-        ]);
-        
-        setView(AppView.DASHBOARD);
+      const res = await fetch(`${API_URL}/groups`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+        body: JSON.stringify(groupDraft),
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.msg || 'Failed to save group');
+      }
+      const savedGroup = await res.json();
+      setActivities(prev => [
+        {
+          _id: `activity-${Date.now()}`,
+          userId: savedGroup.ownerId,
+          icon: 'group',
+          text: `Created a new group: ${savedGroup.name}`,
+          createdAt: new Date().toISOString()
+        },
+        ...prev
+      ]);
+
+      setView(AppView.DASHBOARD);
     } catch (err: any) {
-        setError("Could not create the group: " + err.message);
+      setError("Could not create the group: " + err.message);
     }
   }, [getAuthToken, handleLogout]);
 
@@ -353,8 +379,8 @@ const App: React.FC = () => {
     const docId = (updatedDoc as any)._id || updatedDoc.id;
 
     if (!docId) {
-        setError("Cannot update document without a valid ID.");
-        return;
+      setError("Cannot update document without a valid ID.");
+      return;
     }
 
     const previousDocuments = documents;
@@ -365,12 +391,12 @@ const App: React.FC = () => {
       const res = await fetch(`${API_URL}/documents/${docId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
-        body: JSON.stringify({ userNotes: updatedDoc.userNotes }), 
+        body: JSON.stringify({ userNotes: updatedDoc.userNotes }),
       });
 
       if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.msg || 'Failed to save notes to server');
+        const errorData = await res.json();
+        throw new Error(errorData.msg || 'Failed to save notes to server');
       }
     } catch (err: any) {
       setError(`Error saving notes: ${err.message}`);
@@ -385,28 +411,28 @@ const App: React.FC = () => {
     const token = getAuthToken();
     if (!token) return handleLogout();
     try {
-        const res = await fetch(`${API_URL}/writing`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
-            body: JSON.stringify({ title: 'Untitled Document' }) 
-        });
-        if (!res.ok) throw new Error('Failed to create document');
-        const newDoc = await res.json();
-        setWritingDocuments(prev => [newDoc, ...prev]);
-        setActiveWritingDocumentId(newDoc._id); 
-        
-        setActivities(prev => [
-            {
-                _id: `activity-${Date.now()}`,
-                userId: newDoc.userId,
-                icon: 'writing',
-                text: `Started a new document: ${newDoc.title}`,
-                createdAt: new Date().toISOString()
-            },
-            ...prev
-        ]);
+      const res = await fetch(`${API_URL}/writing`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+        body: JSON.stringify({ title: 'Untitled Document' })
+      });
+      if (!res.ok) throw new Error('Failed to create document');
+      const newDoc = await res.json();
+      setWritingDocuments(prev => [newDoc, ...prev]);
+      setActiveWritingDocumentId(newDoc._id);
+
+      setActivities(prev => [
+        {
+          _id: `activity-${Date.now()}`,
+          userId: newDoc.userId,
+          icon: 'writing',
+          text: `Started a new document: ${newDoc.title}`,
+          createdAt: new Date().toISOString()
+        },
+        ...prev
+      ]);
     } catch (err: any) {
-        setError(err.message);
+      setError(err.message);
     }
   }, [getAuthToken, handleLogout]);
 
@@ -416,28 +442,28 @@ const App: React.FC = () => {
     if (!token) return handleLogout();
     const docId = updatedDocData.id;
     if (!docId) {
-        setError("Cannot update writing document without ID.");
-        return;
+      setError("Cannot update writing document without ID.");
+      return;
     }
 
     const previousWritingDocs = writingDocuments;
     const updatedDoc = {
-        ...writingDocuments.find(d => (d as any)._id === docId), 
-        ...updatedDocData,
-        lastModified: new Date()
+      ...writingDocuments.find(d => (d as any)._id === docId),
+      ...updatedDocData,
+      lastModified: new Date()
     };
     setWritingDocuments(prev => prev.map(d => (d as any)._id === docId ? updatedDoc : d));
 
     try {
-        const res = await fetch(`${API_URL}/writing/${docId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
-            body: JSON.stringify({ title: updatedDoc.title, content: updatedDoc.content })
-        });
-        if (!res.ok) throw new Error('Failed to update document');
+      const res = await fetch(`${API_URL}/writing/${docId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+        body: JSON.stringify({ title: updatedDoc.title, content: updatedDoc.content })
+      });
+      if (!res.ok) throw new Error('Failed to update document');
     } catch (err: any) {
-        setError(err.message);
-        setWritingDocuments(previousWritingDocs); 
+      setError(err.message);
+      setWritingDocuments(previousWritingDocs);
     }
   }, [writingDocuments, getAuthToken, handleLogout]);
 
@@ -449,21 +475,21 @@ const App: React.FC = () => {
     const previousWritingDocs = writingDocuments;
     setWritingDocuments(prev => prev.filter(d => (d as any)._id !== id));
     if (activeWritingDocumentId === id) {
-        setActiveWritingDocumentId(null);
+      setActiveWritingDocumentId(null);
     }
 
     try {
-        const res = await fetch(`${API_URL}/writing/${id}`, {
-            method: 'DELETE',
-            headers: { 'x-auth-token': token }
-        });
-        if (!res.ok) throw new Error('Failed to delete document');
+      const res = await fetch(`${API_URL}/writing/${id}`, {
+        method: 'DELETE',
+        headers: { 'x-auth-token': token }
+      });
+      if (!res.ok) throw new Error('Failed to delete document');
     } catch (err: any) {
-        setError(err.message);
-        setWritingDocuments(previousWritingDocs); 
-        if (activeWritingDocumentId === id) {
-             setActiveWritingDocumentId(id);
-        }
+      setError(err.message);
+      setWritingDocuments(previousWritingDocs);
+      if (activeWritingDocumentId === id) {
+        setActiveWritingDocumentId(id);
+      }
     }
   }, [activeWritingDocumentId, writingDocuments, getAuthToken, handleLogout]);
 
@@ -473,33 +499,33 @@ const App: React.FC = () => {
     if (!file) return;
     setError('');
     setSummarizerView(SummarizerView.PROCESSING);
-    setProcessingMessage('Uploading file to secure server...'); 
+    setProcessingMessage('Uploading file to secure server...');
 
     try {
       const savedDocument = await processFileOnBackend(file, (msg) => setProcessingMessage(msg));
 
       setProcessingMessage('Updating dashboard...');
-      
+
       // Update frontend state
       setDocuments(prev => [savedDocument, ...prev]);
       setActiveDocument(savedDocument);
       setSummarizerView(SummarizerView.RESULTS);
-      
+
       // Add to activities feed
       setActivities(prev => [
-          {
-              _id: `activity-${Date.now()}`,
-              userId: savedDocument.userId,
-              icon: 'summarizer',
-              text: `Summarized the document: ${savedDocument.fileName}`,
-              createdAt: new Date().toISOString()
-          },
-          ...prev
+        {
+          _id: `activity-${Date.now()}`,
+          userId: savedDocument.userId,
+          icon: 'summarizer',
+          text: `Summarized the document: ${savedDocument.fileName}`,
+          createdAt: new Date().toISOString()
+        },
+        ...prev
       ]);
-      
+
       // Refresh stats
       const token = getAuthToken();
-      if(token) {
+      if (token) {
         fetch(`${API_URL}/stats`, { headers: { 'x-auth-token': token } })
           .then(res => res.ok ? res.json() : null)
           .then(statsData => setStats(statsData));
@@ -510,7 +536,7 @@ const App: React.FC = () => {
       setError(`Failed to process the document. ${err.message}`);
       setSummarizerView(SummarizerView.ERROR);
     } finally {
-      setProcessingMessage(''); 
+      setProcessingMessage('');
     }
   }, [getAuthToken]); // Removed handleLogout dependency, it's called internally
 
@@ -523,7 +549,7 @@ const App: React.FC = () => {
     setProcessingMessage("Uploading document for story analysis...");
 
     try {
-      const story = await generateCreatorStory(file); 
+      const story = await generateCreatorStory(file);
       setStoryContent(story);
       setStoryfyState('RESULT');
 
@@ -532,26 +558,26 @@ const App: React.FC = () => {
       setError(`Failed to create story. ${err.message}`);
       setStoryfyState('ERROR');
     } finally {
-        setProcessingMessage('');
+      setProcessingMessage('');
     }
   }, []); // Removed getAuthToken/handleLogout, service handles it
 
   // --- NEW: Refactored AI Suggestion Logic ---
   const fetchAISuggestions = useCallback(async (currentContent: string): Promise<string | null> => {
-      setError('');
-      try {
-          const tempDiv = document.createElement('div');
-          tempDiv.innerHTML = currentContent;
-          const textContent = tempDiv.textContent || '';
-          if (!textContent.trim()) return null;
+    setError('');
+    try {
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = currentContent;
+      const textContent = tempDiv.textContent || '';
+      if (!textContent.trim()) return null;
 
-          const suggestedHtml = await suggestImprovements(textContent); 
-          return suggestedHtml;
+      const suggestedHtml = await suggestImprovements(textContent);
+      return suggestedHtml;
 
-      } catch (err: any) {
-          setError(`AI Suggestion Error: ${err.message}`);
-          return null; 
-      }
+    } catch (err: any) {
+      setError(`AI Suggestion Error: ${err.message}`);
+      return null;
+    }
   }, []);
 
   // --- TASK HANDLERS (Unchanged) ---
@@ -589,19 +615,19 @@ const App: React.FC = () => {
       const res = await fetch(`${API_URL}/tasks/${taskId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
-        body: JSON.stringify({ completed: updatedTask.completed }), 
+        body: JSON.stringify({ completed: updatedTask.completed }),
       });
       if (!res.ok) throw new Error('Failed to update task');
       if (updatedTask.completed) {
-         setActivities(prev => [
-            {
-                _id: `activity-${Date.now()}`,
-                userId: (task as any).userId,
-                icon: 'task',
-                text: `Completed task: ${updatedTask.text}`,
-                createdAt: new Date().toISOString()
-            },
-            ...prev
+        setActivities(prev => [
+          {
+            _id: `activity-${Date.now()}`,
+            userId: (task as any).userId,
+            icon: 'task',
+            text: `Completed task: ${updatedTask.text}`,
+            createdAt: new Date().toISOString()
+          },
+          ...prev
         ]);
         fetch(`${API_URL}/stats`, { headers: { 'x-auth-token': token } })
           .then(res => res.ok ? res.json() : null)
@@ -610,7 +636,7 @@ const App: React.FC = () => {
     } catch (err) {
       console.error("Failed to toggle task:", err);
       setError("Failed to update task.");
-      setTasks(previousTasks); 
+      setTasks(previousTasks);
     }
   }, [tasks, getAuthToken]);
 
@@ -628,9 +654,9 @@ const App: React.FC = () => {
     } catch (err) {
       console.error("Failed to delete task:", err);
       setError("Failed to delete task.");
-      setTasks(previousTasks); 
+      setTasks(previousTasks);
     }
-  }, [getAuthToken, tasks]); 
+  }, [getAuthToken, tasks]);
 
 
   // --- RENDER LOGIC ---
@@ -645,16 +671,16 @@ const App: React.FC = () => {
         if (activeDocForResults) {
           return <ResultsView
             document={activeDocForResults}
-            onUpdateDocument={handleUpdateDocument} 
+            onUpdateDocument={handleUpdateDocument}
             onReset={handleGoToDashboard}
             onShowNotebook={() => setSummarizerView(SummarizerView.NOTEBOOK)}
             scrollTarget={scrollTarget}
             onClearScrollTarget={() => setScrollTarget(null)}
-            />;
+          />;
         }
         return <ErrorView message="Could not load summary results. Document not found." onReset={handleGoToDashboard} />;
       case SummarizerView.NOTEBOOK:
-        if (activeDocument) { 
+        if (activeDocument) {
           return <NotebookView
             document={activeDocument}
             onReset={handleGoToDashboard}
@@ -673,84 +699,84 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     if (view === AppView.LOGIN && getAuthToken() && currentUser === null) {
-        return <div className="flex items-center justify-center h-screen"><ProcessingView message="Loading your dashboard..." /></div>;
+      return <div className="flex items-center justify-center h-screen"><ProcessingView message="Loading your dashboard..." /></div>;
     }
-    switch(view) {
-        case AppView.LOGIN:
-            return <AuthView
-                        onRegister={handleRegister}
-                        onLogin={handleLogin}
-                        onForgotPassword={handleForgotPassword}
-                        onResetPassword={handleResetPassword}
-                    />;
-        case AppView.CREATE_PROFILE:
-            if (!currentUser) return <AuthView onRegister={handleRegister} onLogin={handleLogin} onForgotPassword={handleForgotPassword} onResetPassword={handleResetPassword} />;
-            return <CreateProfileView onProfileCreate={handleProfileCreate} />;
-        case AppView.ONBOARDING:
-             if (!currentUser) return <AuthView onRegister={handleRegister} onLogin={handleLogin} onForgotPassword={handleForgotPassword} onResetPassword={handleResetPassword} />;
-            return <OnboardingView onComplete={(groupDraft) => handleOnboardingComplete(groupDraft)} onExit={handleLogout} />;
-        case AppView.DASHBOARD:
-             if (!currentUser) return <AuthView onRegister={handleRegister} onLogin={handleLogin} onForgotPassword={handleForgotPassword} onResetPassword={handleResetPassword} />;
-            return <DashboardView
-                      user={currentUser}
-                      documents={documents}
-                      tasks={tasks}
-                      activities={activities}
-                      stats={stats} 
-                      onStartNew={handleStartNew}
-                      onViewDocument={handleViewDocument}
-                      onNavigateToProfile={handleGoToProfile}
-                      onNavigateToMemory={handleGoToMemory}
-                      onNavigateToStoryfy={handleGoToStoryfy}
-                      onNavigateToWritingWizard={handleGoToWritingWizard}
-                      onLogout={handleLogout}
-                      onAddTask={handleAddTask}
-                      onToggleTask={handleToggleTask}
-                      onDeleteTask={handleDeleteTask}
-                    />;
-        case AppView.SUMMARIZER:
-            if (!currentUser) return <AuthView onRegister={handleRegister} onLogin={handleLogin} onForgotPassword={handleForgotPassword} onResetPassword={handleResetPassword} />;
-            return renderSummarizerContent();
-        case AppView.PROFILE:
-            if (!currentUser) return <AuthView onRegister={handleRegister} onLogin={handleLogin} onForgotPassword={handleForgotPassword} onResetPassword={handleResetPassword} />;
-            return <ProfileView user={currentUser} onUpdateProfile={(updatedUser) => handleUpdateProfile(updatedUser)} onBack={handleGoToDashboard} />;
-        case AppView.MEMORY:
-             if (!currentUser) return <AuthView onRegister={handleRegister} onLogin={handleLogin} onForgotPassword={handleForgotPassword} onResetPassword={handleResetPassword} />;
-             return <MemoryView documents={documents} onOpenNote={handleViewDocument} onBack={handleGoToDashboard} />;
-        case AppView.STORYFY:
-             if (!currentUser) return <AuthView onRegister={handleRegister} onLogin={handleLogin} onForgotPassword={handleForgotPassword} onResetPassword={handleResetPassword} />;
-             return <StoryfyView
-                state={storyfyState}
-                storyContent={storyContent}
-                error={error}
-                onGenerate={handleGenerateStory} // --- NEW: Pass the refactored handler
-                onBack={handleGoToDashboard}
-                onReset={() => {
-                  setStoryfyState('UPLOAD');
-                  setStoryContent('');
-                  setError('');
-                }}
-             />;
-        case AppView.WRITING_WIZARD:
-            if (!currentUser) return <AuthView onRegister={handleRegister} onLogin={handleLogin} onForgotPassword={handleForgotPassword} onResetPassword={handleResetPassword} />;
-            return <WritingWizardView
-                documents={writingDocuments.map(d => ({ ...d, id: (d as any)._id }))}
-                activeDocumentId={activeWritingDocumentId}
-                onSelectDocument={(id) => setActiveWritingDocumentId(id)}
-                onCreateDocument={handleCreateWritingDocument}
-                onUpdateDocument={(doc) => handleUpdateWritingDocument({ ...doc, id: (doc as any)._id || doc.id })}
-                onDeleteDocument={handleDeleteWritingDocument}
-                onBack={handleGoToDashboard}
-            />;
-        default:
-            return <AuthView onRegister={handleRegister} onLogin={handleLogin} onForgotPassword={handleForgotPassword} onResetPassword={handleResetPassword} />;
+    switch (view) {
+      case AppView.LOGIN:
+        return <AuthView
+          onRegister={handleRegister}
+          onLogin={handleLogin}
+          onForgotPassword={handleForgotPassword}
+          onResetPassword={handleResetPassword}
+        />;
+      case AppView.CREATE_PROFILE:
+        if (!currentUser) return <AuthView onRegister={handleRegister} onLogin={handleLogin} onForgotPassword={handleForgotPassword} onResetPassword={handleResetPassword} />;
+        return <CreateProfileView onProfileCreate={handleProfileCreate} />;
+      case AppView.ONBOARDING:
+        if (!currentUser) return <AuthView onRegister={handleRegister} onLogin={handleLogin} onForgotPassword={handleForgotPassword} onResetPassword={handleResetPassword} />;
+        return <OnboardingView onComplete={(groupDraft) => handleOnboardingComplete(groupDraft)} onExit={handleLogout} />;
+      case AppView.DASHBOARD:
+        if (!currentUser) return <AuthView onRegister={handleRegister} onLogin={handleLogin} onForgotPassword={handleForgotPassword} onResetPassword={handleResetPassword} />;
+        return <DashboardView
+          user={currentUser}
+          documents={documents}
+          tasks={tasks}
+          activities={activities}
+          stats={stats}
+          onStartNew={handleStartNew}
+          onViewDocument={handleViewDocument}
+          onNavigateToProfile={handleGoToProfile}
+          onNavigateToMemory={handleGoToMemory}
+          onNavigateToStoryfy={handleGoToStoryfy}
+          onNavigateToWritingWizard={handleGoToWritingWizard}
+          onLogout={handleLogout}
+          onAddTask={handleAddTask}
+          onToggleTask={handleToggleTask}
+          onDeleteTask={handleDeleteTask}
+        />;
+      case AppView.SUMMARIZER:
+        if (!currentUser) return <AuthView onRegister={handleRegister} onLogin={handleLogin} onForgotPassword={handleForgotPassword} onResetPassword={handleResetPassword} />;
+        return renderSummarizerContent();
+      case AppView.PROFILE:
+        if (!currentUser) return <AuthView onRegister={handleRegister} onLogin={handleLogin} onForgotPassword={handleForgotPassword} onResetPassword={handleResetPassword} />;
+        return <ProfileView user={currentUser} onUpdateProfile={(updatedUser) => handleUpdateProfile(updatedUser)} onBack={handleGoToDashboard} />;
+      case AppView.MEMORY:
+        if (!currentUser) return <AuthView onRegister={handleRegister} onLogin={handleLogin} onForgotPassword={handleForgotPassword} onResetPassword={handleResetPassword} />;
+        return <MemoryView documents={documents} onOpenNote={handleViewDocument} onBack={handleGoToDashboard} />;
+      case AppView.STORYFY:
+        if (!currentUser) return <AuthView onRegister={handleRegister} onLogin={handleLogin} onForgotPassword={handleForgotPassword} onResetPassword={handleResetPassword} />;
+        return <StoryfyView
+          state={storyfyState}
+          storyContent={storyContent}
+          error={error}
+          onGenerate={handleGenerateStory} // --- NEW: Pass the refactored handler
+          onBack={handleGoToDashboard}
+          onReset={() => {
+            setStoryfyState('UPLOAD');
+            setStoryContent('');
+            setError('');
+          }}
+        />;
+      case AppView.WRITING_WIZARD:
+        if (!currentUser) return <AuthView onRegister={handleRegister} onLogin={handleLogin} onForgotPassword={handleForgotPassword} onResetPassword={handleResetPassword} />;
+        return <WritingWizardView
+          documents={writingDocuments.map(d => ({ ...d, id: (d as any)._id }))}
+          activeDocumentId={activeWritingDocumentId}
+          onSelectDocument={(id) => setActiveWritingDocumentId(id)}
+          onCreateDocument={handleCreateWritingDocument}
+          onUpdateDocument={(doc) => handleUpdateWritingDocument({ ...doc, id: (doc as any)._id || doc.id })}
+          onDeleteDocument={handleDeleteWritingDocument}
+          onBack={handleGoToDashboard}
+        />;
+      default:
+        return <AuthView onRegister={handleRegister} onLogin={handleLogin} onForgotPassword={handleForgotPassword} onResetPassword={handleResetPassword} />;
     }
   }
 
   // --- MAIN RENDER ---
   const mainClass = view === AppView.LOGIN || view === AppView.CREATE_PROFILE
-    ? 'flex-grow flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8' 
-    : 'flex-grow'; 
+    ? 'flex-grow flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8'
+    : 'flex-grow';
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-[#121212]">

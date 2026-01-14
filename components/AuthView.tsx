@@ -15,7 +15,7 @@ type AuthMode = 'login' | 'register' | 'forgotPassword' | 'resetPassword';
 
 const AuthView: React.FC<AuthViewProps> = ({ onRegister, onLogin, onForgotPassword, onResetPassword }) => {
   const [authMode, setAuthMode] = useState<AuthMode>('register');
-  
+
   // Form state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -43,7 +43,7 @@ const AuthView: React.FC<AuthViewProps> = ({ onRegister, onLogin, onForgotPasswo
     setAuthMode(newMode);
     clearFormState();
   };
-  
+
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -53,19 +53,19 @@ const AuthView: React.FC<AuthViewProps> = ({ onRegister, onLogin, onForgotPasswo
       return;
     }
     setLoading(true);
-    const result = onRegister(fullName, email, password);
+    const result = await onRegister(fullName, email, password);
     if (!result.success) {
       setError(result.message);
     }
     setLoading(false);
   };
-  
+
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
     setLoading(true);
-    const result = onLogin(email, password);
+    const result = await onLogin(email, password);
     if (!result.success) {
       setError(result.message);
     }
@@ -77,12 +77,12 @@ const AuthView: React.FC<AuthViewProps> = ({ onRegister, onLogin, onForgotPasswo
     setError('');
     setSuccess('');
     setLoading(true);
-    const result = onForgotPassword(email);
+    const result = await onForgotPassword(email);
     if (result.success) {
-        setSuccess(result.message);
-        setAuthMode('resetPassword');
+      setSuccess(result.message);
+      setAuthMode('resetPassword');
     } else {
-        setError(result.message);
+      setError(result.message);
     }
     setLoading(false);
   };
@@ -92,21 +92,20 @@ const AuthView: React.FC<AuthViewProps> = ({ onRegister, onLogin, onForgotPasswo
     setError('');
     setSuccess('');
     if (password !== confirmPassword) {
-        setError('New passwords do not match.');
-        return;
+      setError('New passwords do not match.');
+      return;
     }
     if (password.length < 6) {
-        setError('Password must be at least 6 characters long.');
-        return;
+      setError('Password must be at least 6 characters long.');
+      return;
     }
     setLoading(true);
-    const result = onResetPassword(otp, password);
+    const result = await onResetPassword(otp, password);
     if (result.success) {
-        switchMode('login');
-        // Use a timeout to ensure the success message is visible after the state switch
-        setTimeout(() => setSuccess(result.message), 100);
+      switchMode('login');
+      setTimeout(() => setSuccess(result.message), 100);
     } else {
-        setError(result.message);
+      setError(result.message);
     }
     setLoading(false);
   };
@@ -128,7 +127,7 @@ const AuthView: React.FC<AuthViewProps> = ({ onRegister, onLogin, onForgotPasswo
               <label htmlFor="password-reg" className="block text-sm font-medium text-black dark:text-white">Password</label>
               <input id="password-reg" name="password-reg" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1 block w-full input-style" />
             </div>
-             <div>
+            <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-black dark:text-white">Confirm Password</label>
               <input id="confirmPassword" name="confirmPassword" type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="mt-1 block w-full input-style" />
             </div>
@@ -142,7 +141,7 @@ const AuthView: React.FC<AuthViewProps> = ({ onRegister, onLogin, onForgotPasswo
       case 'forgotPassword':
         return (
           <form onSubmit={handleForgotSubmit} className="space-y-4">
-             <h3 className="font-bold text-xl text-black dark:text-white mb-1">Forgot Password?</h3>
+            <h3 className="font-bold text-xl text-black dark:text-white mb-1">Forgot Password?</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Enter your email and we'll send you an OTP to reset your password.</p>
             <div>
               <label htmlFor="email-forgot" className="block text-sm font-medium text-black dark:text-white">Email address</label>
@@ -161,8 +160,8 @@ const AuthView: React.FC<AuthViewProps> = ({ onRegister, onLogin, onForgotPasswo
       case 'resetPassword':
         return (
           <form onSubmit={handleResetSubmit} className="space-y-4">
-             <h3 className="font-bold text-xl text-black dark:text-white mb-4">Reset Your Password</h3>
-             <div>
+            <h3 className="font-bold text-xl text-black dark:text-white mb-4">Reset Your Password</h3>
+            <div>
               <label htmlFor="otp" className="block text-sm font-medium text-black dark:text-white">One-Time Password (OTP)</label>
               <input id="otp" name="otp" type="text" required value={otp} onChange={(e) => setOtp(e.target.value)} className="mt-1 block w-full input-style" autoFocus />
             </div>
@@ -187,7 +186,7 @@ const AuthView: React.FC<AuthViewProps> = ({ onRegister, onLogin, onForgotPasswo
           <form onSubmit={handleLoginSubmit} className="space-y-4">
             <div>
               <label htmlFor="email-login" className="block text-sm font-medium text-black dark:text-white">Email address</label>
-              <input id="email-login" name="email-login" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 block w-full input-style" autoFocus/>
+              <input id="email-login" name="email-login" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 block w-full input-style" autoFocus />
             </div>
             <div>
               <label htmlFor="password-login" className="block text-sm font-medium text-black dark:text-white">Password</label>
@@ -195,11 +194,11 @@ const AuthView: React.FC<AuthViewProps> = ({ onRegister, onLogin, onForgotPasswo
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                  <input id="remember-me" name="remember-me" type="checkbox" className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded" />
-                  <label htmlFor="remember-me" className="ml-2 block text-sm text-black dark:text-white">Remember me</label>
+                <input id="remember-me" name="remember-me" type="checkbox" className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded" />
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-black dark:text-white">Remember me</label>
               </div>
               <div className="text-sm">
-                  <button type="button" onClick={() => switchMode('forgotPassword')} className="font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">Forgot your password?</button>
+                <button type="button" onClick={() => switchMode('forgotPassword')} className="font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">Forgot your password?</button>
               </div>
             </div>
             <div>
@@ -213,39 +212,39 @@ const AuthView: React.FC<AuthViewProps> = ({ onRegister, onLogin, onForgotPasswo
   };
 
   const Feature: React.FC<{ icon: React.ReactNode, title: string, children: React.ReactNode }> = ({ icon, title, children }) => (
-    <div className="flex items-start gap-4">
-      <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-lg">{icon}</div>
+    <div className="flex items-start gap-4 animate-fade-in p-3 rounded-xl bg-white/10 backdrop-blur-sm">
+      <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-white/20 rounded-xl">{icon}</div>
       <div>
-        <h3 className="font-semibold text-black dark:text-white">{title}</h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{children}</p>
+        <h3 className="font-semibold text-white">{title}</h3>
+        <div className="text-sm mt-1">{children}</div>
       </div>
     </div>
   );
 
   return (
-    <div className="w-full max-w-4xl flex bg-white dark:bg-[#1E1E1E] rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div className="w-full max-w-4xl flex glass rounded-2xl shadow-2xl glow-indigo overflow-hidden animate-fade-in">
       {/* Left Pitch Column */}
-      <div className="hidden md:block w-1/2 bg-white dark:bg-black/20 p-10">
-          <div className="flex items-center gap-3">
-            <DoodleIcon className="w-8 h-8 text-amber-500" />
-            <h1 className="text-2xl font-bold text-black dark:text-white tracking-tight">Doodle Digest</h1>
-          </div>
-          <p className="mt-4 text-gray-500 dark:text-gray-400">
-            Go from complex research to clear, collaborative insights in minutes.
-          </p>
-          <div className="mt-10 space-y-8">
-            <Feature icon={<LightbulbIcon className="w-5 h-5" />} title="AI-Powered Summaries">
-              Our AI reads your papers and creates simple, visual summaries so you can grasp key concepts instantly.
-            </Feature>
-            <Feature icon={<UsersIcon className="w-5 h-5" />} title="Built for Collaboration">
-              Create research groups, manage tasks, and share findings all in one place.
-            </Feature>
-            <Feature icon={<CheckCircleIcon className="w-5 h-5" />} title="Stay Organized">
-              From datasets to literature reviews, our tools keep your project on track.
-            </Feature>
-          </div>
+      <div className="hidden md:flex md:flex-col md:justify-center w-1/2 gradient-bg p-10 relative">
+        <div className="flex items-center gap-3 animate-fade-in">
+          <DoodleIcon className="w-10 h-10 text-white float-animation" />
+          <h1 className="text-2xl font-bold text-white tracking-tight">Doodle Digest</h1>
+        </div>
+        <p className="mt-4 text-white/80">
+          Go from complex research to clear, collaborative insights in minutes.
+        </p>
+        <div className="mt-10 space-y-8 stagger-children">
+          <Feature icon={<LightbulbIcon className="w-5 h-5 text-white" />} title="AI-Powered Summaries">
+            <span className="text-white/70">Our AI reads your papers and creates simple, visual summaries so you can grasp key concepts instantly.</span>
+          </Feature>
+          <Feature icon={<UsersIcon className="w-5 h-5 text-white" />} title="Built for Collaboration">
+            <span className="text-white/70">Create research groups, manage tasks, and share findings all in one place.</span>
+          </Feature>
+          <Feature icon={<CheckCircleIcon className="w-5 h-5 text-white" />} title="Stay Organized">
+            <span className="text-white/70">From datasets to literature reviews, our tools keep your project on track.</span>
+          </Feature>
+        </div>
       </div>
-      
+
       {/* Right Form Column */}
       <div className="w-full md:w-1/2 p-8 sm:p-10">
         {(authMode === 'login' || authMode === 'register') && (
@@ -261,7 +260,7 @@ const AuthView: React.FC<AuthViewProps> = ({ onRegister, onLogin, onForgotPasswo
 
         {success && <p className="mb-4 text-sm font-medium text-green-600 dark:text-green-400">{success}</p>}
         {error && <p className="mb-4 text-sm font-medium text-red-600 dark:text-red-400">{error}</p>}
-        
+
         {renderForm()}
       </div>
       <style>{`.input-style {

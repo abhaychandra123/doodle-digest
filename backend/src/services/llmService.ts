@@ -67,17 +67,34 @@ export const chunkText = (pages: PdfPage[], chunkSize: number): TextChunk[] => {
 };
 
 const getDoodlePrompt = (concept: string): string => {
-  return [
-    `Ultra-minimal stick-figure style doodle for: "${concept}".
-    Rules:
-    - Background: fully transparent.
-    - Lines: 2–8 total strokes, thick black pen, no shading, no gradients.
-    - Shapes: simple outlines only; no textures, no details.
-    - Composition: icon-like, centered, lots of empty space.
-    - Text: none.
-    - Colors: strictly black lines; optionally 1 tiny pale-yellow highlight only if essential.
-    - Purpose: aid quick understanding, not realism.`
-  ][0];
+  // Extract key visual elements from the concept
+  const cleanConcept = concept.slice(0, 200); // Limit length
+
+  return `Create a charming, hand-drawn educational illustration for: "${cleanConcept}"
+
+Style Requirements:
+- AESTHETIC: Whimsical notebook sketch style, like a talented student's margin doodle
+- STROKE: Smooth, confident ink lines with slight hand-drawn imperfection
+- COLOR PALETTE: Primarily warm black/dark gray lines with strategic accent colors:
+  • Soft amber/yellow for highlights and emphasis
+  • Muted teal/blue for secondary elements
+  • Gentle coral/pink for warmth
+- BACKGROUND: Clean white or very soft cream
+
+Composition Rules:
+- Central focal point with clear visual hierarchy
+- Simple iconographic representation of the core concept
+- Include 1-2 small decorative elements (stars, arrows, or underlines)
+- Leave breathing room around edges
+- NO text, labels, or words
+
+Visual Approach:
+- Think "infographic meets sketchbook"
+- If abstract concept: use metaphorical visual (e.g., gears for process, lightbulb for ideas)
+- If scientific: simplified diagram without labels
+- If historical/story: key character or symbol
+
+Output: A single cohesive illustration suitable for margin of study notes.`;
 };
 
 const callChat = async (messages: any, opts?: { json?: boolean; temperature?: number }) => {
