@@ -1,4 +1,5 @@
 import React from 'react';
+import { sanitizeHtml } from '../utils/sanitizeHtml';
 
 interface SuggestionModalProps {
   originalContent: string;
@@ -27,13 +28,13 @@ const SuggestionModal: React.FC<SuggestionModalProps> = ({ originalContent, sugg
             <div className="flex flex-col">
                 <h3 className="font-semibold text-slate-600 dark:text-slate-300 mb-2">Original</h3>
                 <div className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-700/50 flex-grow overflow-y-auto"
-                    dangerouslySetInnerHTML={{ __html: originalContent }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(originalContent) }}
                 />
             </div>
              <div className="flex flex-col">
                 <h3 className="font-semibold text-green-600 dark:text-green-400 mb-2">Suggestion</h3>
                 <div className="p-4 border border-green-300 dark:border-green-600 rounded-lg bg-green-50 dark:bg-green-500/10 flex-grow overflow-y-auto"
-                    dangerouslySetInnerHTML={{ __html: suggestedContent }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(suggestedContent) }}
                 />
             </div>
         </div>

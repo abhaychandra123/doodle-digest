@@ -57,16 +57,29 @@ The frontend will start on `http://localhost:3000`
 
 ### Backend (`backend/.env`)
 - `MONGO_URI` - MongoDB connection string ✅ Configured
-- `JWT_SECRET` - Secret for JWT tokens ✅ Configured  
+- `JWT_SECRET` - Secret for JWT tokens ✅ Configured
 - `OPENAI_API_KEY` - OpenAI API key (backend only)
+- `OPENAI_MODEL` - Chat model (default `gpt-4o-mini`)
+- `OPENAI_IMAGE_MODEL` - Image model for doodles (`gpt-image-1`)
+- `OPENAI_IMAGE_SIZE` - Image size (`256x256`, `512x512`, `1024x1024`)
+- `ENABLE_IMAGE_GENERATION` - `true|false` to control image generation
+- `EMAIL_HOST` - SMTP host for password reset email
+- `EMAIL_PORT` - SMTP port
+- `EMAIL_USER` - SMTP username
+- `EMAIL_PASS` - SMTP password
+- `EMAIL_FROM` - Sender email address
+- `EMAIL_SECURE` - `true|false` for SMTP TLS
+- `OBJECT_STORAGE_REGION` - S3/compatible region
+- `OBJECT_STORAGE_ENDPOINT` - Optional custom endpoint (MinIO/R2/etc)
+- `OBJECT_STORAGE_ACCESS_KEY_ID` - Object storage access key
+- `OBJECT_STORAGE_SECRET_ACCESS_KEY` - Object storage secret key
+- `OBJECT_STORAGE_BUCKET` - Bucket name
+- `OBJECT_STORAGE_PUBLIC_BASE_URL` - Public base URL for uploaded files
+- `COOKIE_SAMESITE` - Optional cookie SameSite override (`lax|none|strict`)
+- `JOB_WORKER_INTERVAL_MS` - Optional job worker poll interval (default `2000`)
 
 ### Frontend (`.env`)
 - `VITE_API_URL` - Backend API URL ✅ Configured as `http://localhost:5001/api`
-- `OPENAI_API_KEY` - Backend-only key for OpenAI API (in `backend/.env`)
-- `OPENAI_MODEL` - Chat model (default `gpt-4o-mini`)
-- `OPENAI_IMAGE_MODEL` - Image model for doodles (`dall-e-3` or `gpt-image-1`)
-- `OPENAI_IMAGE_SIZE` - Image size (`256x256`, `512x512`, `1024x1024`)
-- `ENABLE_IMAGE_GENERATION` - `true|false` to control image generation
 
 ## Testing the Integration
 
@@ -82,14 +95,17 @@ The frontend will start on `http://localhost:3000`
 - `POST /api/auth/register` - Register new user
 - `POST /api/auth/login` - Login user
 - `GET /api/auth/user` - Get current user
+- `POST /api/auth/logout` - Logout (clears HttpOnly cookie)
 
 ### Documents
 - `GET /api/documents` - Get all documents
+- `GET /api/documents/:id` - Get a single document
 - `POST /api/documents` - Save document
 - `PUT /api/documents/:id` - Update document notes
 
 ### AI Processing
-- `POST /api/ai/process-file` - Process file and generate summaries (requires file upload)
+- `POST /api/ai/process-file` - Upload file and enqueue processing job
+- `GET /api/ai/jobs/:id` - Fetch job status/progress
 - `POST /api/ai/storyfy` - Generate creator story (requires file upload)
 - `POST /api/ai/suggest` - Get writing suggestions (requires text in body)
 
@@ -111,7 +127,7 @@ The frontend will start on `http://localhost:3000`
 
 ## Notes
 
-- Image generation (doodles) is currently disabled as it requires proper Imagen API setup
 - The backend uses OpenAI Chat Completions (e.g., gpt-4o-mini) for text generation and OCR
 - CORS is configured to allow requests from `http://localhost:3000`
-- All AI routes require authentication via `x-auth-token` header
+- Auth now uses HttpOnly cookies; frontend requests must send `credentials: 'include'`
+- File processing is async: upload returns a job ID, then poll `/api/ai/jobs/:id` for completion

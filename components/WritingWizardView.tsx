@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import { WritingDocument } from '../types';
 import { PlusIcon } from './icons/PlusIcon';
 import { DocumentIcon } from './icons/DocumentIcon';
@@ -7,7 +7,6 @@ import { ArrowLeftIcon } from './icons/ArrowLeftIcon';
 import RichTextEditor from './RichTextEditor';
 import { suggestImprovements } from '../services/aiService';
 import SuggestionModal from './SuggestionModal';
-import { GoogleDocsIcon } from './icons/GoogleDocsIcon';
 
 interface WritingWizardViewProps {
   documents: WritingDocument[];
@@ -49,22 +48,26 @@ const WritingWizardView: React.FC<WritingWizardViewProps> = ({
     if (!activeDocument) return;
     setIsSuggesting(true);
     setSuggestion(null);
+    try {
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = activeDocument.content;
+      const textContent = tempDiv.textContent || '';
+      
+      const suggestedText = await suggestImprovements(textContent);
+      
+      // Basic conversion from markdown-like text to simple HTML
+      const suggestedHtml = suggestedText
+        .split('\n')
+        .filter(line => line.trim() !== '')
+        .map(line => `<p>${line}</p>`)
+        .join('');
 
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = activeDocument.content;
-    const textContent = tempDiv.textContent || '';
-    
-    const suggestedText = await suggestImprovements(textContent);
-    
-    // Basic conversion from markdown-like text to simple HTML
-    const suggestedHtml = suggestedText
-      .split('\n')
-      .filter(line => line.trim() !== '')
-      .map(line => `<p>${line}</p>`)
-      .join('');
-
-    setSuggestion({ original: activeDocument.content, suggested: suggestedHtml });
-    setIsSuggesting(false);
+      setSuggestion({ original: activeDocument.content, suggested: suggestedHtml });
+    } catch (error) {
+      console.error('AI suggestion failed:', error);
+    } finally {
+      setIsSuggesting(false);
+    }
   };
 
   const handleAcceptSuggestion = () => {
@@ -140,21 +143,7 @@ const WritingWizardView: React.FC<WritingWizardViewProps> = ({
                     <ArrowLeftIcon className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
                     Dashboard
                 </button>
-                <div className="flex items-center gap-4">
-                    <div className="flex -space-x-2">
-                        <img className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-800" src="https://i.pravatar.cc/150?u=jane-doe" alt="User 1" />
-                        <img className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-800" src="https://i.pravatar.cc/150?u=john-smith" alt="User 2" />
-                    </div>
-                     <a
-                        href="https://docs.google.com"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title="Open Google Docs"
-                        className="p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-                    >
-                        <GoogleDocsIcon className="w-5 h-5" />
-                    </a>
-                </div>
+                <div />
             </div>
 
             <div className="w-full max-w-4xl flex-grow bg-white dark:bg-slate-800 shadow-lg rounded-md flex flex-col overflow-hidden">

@@ -1,18 +1,14 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import ProcessingView from './ProcessingView';
 import ErrorView from './ErrorView';
 import { ArrowLeftIcon } from './icons/ArrowLeftIcon';
 import { UploadIcon } from './icons/UploadIcon';
-import { CameraIcon } from './icons/CameraIcon';
-import { GoogleDriveIcon } from './icons/GoogleDriveIcon';
-import GoogleDrivePicker from './GoogleDrivePicker';
+import { sanitizeHtml } from '../utils/sanitizeHtml';
 
 declare const marked: any;
 
 // A self-contained upload component for Storyfy
 const StoryUpload: React.FC<{ onFile: (file: File) => void; onBack: () => void; }> = ({ onFile, onBack }) => {
-  const [showDrivePicker, setShowDrivePicker] = useState(false);
-  
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       onFile(e.target.files[0]);
@@ -54,7 +50,7 @@ const StoryUpload: React.FC<{ onFile: (file: File) => void; onBack: () => void; 
         Upload a paper, and we'll tell you the story of the brilliant minds behind the ideas.
       </p>
       
-      <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="mt-10 grid grid-cols-1 md:grid-cols-1 gap-6">
         <InputOption
           icon={<UploadIcon className="w-8 h-8 text-indigo-500" />}
           title="From Device"
@@ -70,24 +66,7 @@ const StoryUpload: React.FC<{ onFile: (file: File) => void; onBack: () => void; 
             onChange={handleFileChange}
           />
         </InputOption>
-
-        <InputOption
-          icon={<CameraIcon className="w-8 h-8 text-teal-500" />}
-          title="Take a Photo"
-          description="Use your camera to snap a picture of a document."
-          onClick={() => alert('Camera input is not yet available for Storyfy.')}
-          disabled
-        />
-
-        <InputOption
-          icon={<GoogleDriveIcon className="w-8 h-8 text-amber-500" />}
-          title="From Google Drive"
-          description="Connect and import a file from your Drive."
-          onClick={() => setShowDrivePicker(true)}
-        />
       </div>
-
-      {showDrivePicker && <GoogleDrivePicker onClose={() => setShowDrivePicker(false)} />}
     </div>
   );
 };
@@ -96,7 +75,7 @@ const StoryUpload: React.FC<{ onFile: (file: File) => void; onBack: () => void; 
 const StoryResult: React.FC<{ content: string; onReset: () => void; }> = ({ content, onReset }) => {
   const htmlContent = useMemo(() => {
     if (typeof marked === 'undefined' || !content) return '';
-    return marked.parse(content);
+    return sanitizeHtml(marked.parse(content));
   }, [content]);
 
   return (

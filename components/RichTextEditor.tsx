@@ -5,6 +5,7 @@ import { HeadingIcon } from './icons/HeadingIcon';
 import { ListIcon } from './icons/ListIcon';
 import { SparklesIcon } from './icons/SparklesIcon';
 import { SpinnerIcon } from './icons/SpinnerIcon';
+import { sanitizeHtml } from '../utils/sanitizeHtml';
 
 interface RichTextEditorProps {
   initialContent: string;
@@ -52,7 +53,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ initialContent, onChang
 
   const handleInput = () => {
     if (editorRef.current) {
-      debouncedOnChange(editorRef.current.innerHTML);
+      debouncedOnChange(sanitizeHtml(editorRef.current.innerHTML));
     }
   };
   
@@ -77,8 +78,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ initialContent, onChang
 
 
   useEffect(() => {
-    if (editorRef.current && editorRef.current.innerHTML !== initialContent) {
-      editorRef.current.innerHTML = initialContent;
+    const sanitizedContent = sanitizeHtml(initialContent);
+    if (editorRef.current && editorRef.current.innerHTML !== sanitizedContent) {
+      editorRef.current.innerHTML = sanitizedContent;
     }
     // Set initial active formats
     updateActiveFormats();
@@ -140,7 +142,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ initialContent, onChang
         onClick={updateActiveFormats}
         onKeyUp={updateActiveFormats}
         className="flex-grow p-8 md:p-12 text-slate-900 dark:text-slate-100 text-base writing-editor-content overflow-y-auto"
-        dangerouslySetInnerHTML={{ __html: initialContent }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(initialContent) }}
       />
     </div>
   );

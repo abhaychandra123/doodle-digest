@@ -1,12 +1,17 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import mongoose, { Document as MongooseDocument, Types } from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 import dotenv from 'dotenv';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import rateLimit from 'express-rate-limit';
 import { body, validationResult } from 'express-validator';
+import cookieParser from 'cookie-parser';
+import crypto from 'crypto';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 
 // Load environment variables FIRST
 dotenv.config();
@@ -33,18 +38,18 @@ import Task from './models/Task';
 import Group from './models/Group';
 import Activity from './models/Activity';
 import PasswordReset from './models/PasswordReset';
+import ProcessingJob from './models/ProcessingJob';
 
 // AI Services
 import {
-    generateDoodleSummary,
-    generateNotebookSummary,
-    generateTotalSummary,
-    generateMiniExercise,
     generateCreatorStory,
     suggestImprovements,
     generateScribble
 } from './services/llmService';
 import { processPdf, processImage } from './services/fileProcessor';
+import { ensureEmailConfigured, sendPasswordResetEmail } from './services/emailService';
+import { ensureStorageConfigured, uploadStream } from './services/storageService';
+import { startJobWorker } from './services/jobQueue';
 
 // --- Define Interfaces ---
 interface IUserPublic extends Omit<mongoose.InferSchemaType<typeof User.schema>, 'password'> {
@@ -180,6 +185,13 @@ const formatMonthlyData = (dbResults: any[]): ChartData[] => {
 // --- CONFIGURATION ---
 // Note: dotenv.config() is called at the top of the file now
 const app = express();
+const COOKIE_SAMESITE = (process.env.COOKIE_SAMESITE || (process.env.NODE_ENV === 'production' ? 'none' : 'lax')) as 'lax' | 'strict' | 'none';
+const COOKIE_OPTIONS = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: COOKIE_SAMESITE,
+    maxAge: 3 * 60 * 60 * 1000, // 3 hours
+};
 // --- **** Request Logging Middleware (Place VERY EARLY) **** ---
 app.use((req: Request, res: Response, next: NextFunction) => {
     console.log(`\nIncoming Request: ${req.method} ${req.path}`);
@@ -196,8 +208,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 const corsOptions = {
     origin: ['http://localhost:3000', 'http://localhost:3001', 'https://doodle-digest.vercel.app'], // Allow both ports
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'], // ✅ ARRAY
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-token', 'Accept'],
-    exposedHeaders: ['x-auth-token'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
     credentials: true,
     preflightContinue: false,
     optionsSuccessStatus: 200
@@ -231,12 +242,23 @@ app.use('/api/auth/forgot-password', authLimiter);
 app.use('/api/auth/reset-password', authLimiter);
 
 // --- OTHER MIDDLEWARE ---
+app.use(cookieParser());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // --- MULTER CONFIGURATION FOR FILE UPLOADS ---
+const uploadTempDir = path.join(os.tmpdir(), 'doodle-digest-uploads');
+fs.mkdirSync(uploadTempDir, { recursive: true });
+
 const upload = multer({
-    storage: multer.memoryStorage(),
+    // Store on disk to avoid buffering large files in memory
+    storage: multer.diskStorage({
+        destination: (_req, _file, cb) => cb(null, uploadTempDir),
+        filename: (_req, file, cb) => {
+            const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+            cb(null, `${Date.now()}-${crypto.randomUUID()}-${safeName}`);
+        }
+    }),
     limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
 });
 
@@ -315,6 +337,7 @@ app.post('/api/auth/register', async (req: Request, res: Response) => { // Use R
         await logActivity(savedUser.id, 'profile', `${fullName} just joined Doodle Digest!`);
 
         const token = jwt.sign({ id: savedUser.id }, process.env.JWT_SECRET!, { expiresIn: '3h' });
+        res.cookie('auth_token', token, COOKIE_OPTIONS);
 
         const userObject = savedUser.toObject();
         const userResponse: IUserPublic = {
@@ -331,7 +354,7 @@ app.post('/api/auth/register', async (req: Request, res: Response) => { // Use R
             updatedAt: userObject.updatedAt,
         };
 
-        res.status(201).json({ token, user: userResponse });
+        res.status(201).json({ user: userResponse });
     } catch (error) {
         console.error(error);
         res.status(500).send('Server error during registration');
@@ -352,6 +375,7 @@ app.post('/api/auth/login', async (req: Request, res: Response) => { // Use Requ
         if (!isMatch) return res.status(400).json({ msg: 'Invalid credentials' });
 
         const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET!, { expiresIn: '3h' });
+        res.cookie('auth_token', token, COOKIE_OPTIONS);
 
         const userObject = user.toObject();
         const userResponse: IUserPublic = {
@@ -368,7 +392,7 @@ app.post('/api/auth/login', async (req: Request, res: Response) => { // Use Requ
             updatedAt: userObject.updatedAt,
         };
 
-        res.json({ token, user: userResponse });
+        res.json({ user: userResponse });
     } catch (error) {
         console.error(error);
         res.status(500).send('Server error during login');
@@ -388,6 +412,17 @@ app.get('/api/auth/user', auth, async (req: AuthRequest, res: Response) => {
     }
 });
 
+// @route   POST /api/auth/logout
+// @desc    Clear auth cookie
+app.post('/api/auth/logout', (req: Request, res: Response) => {
+    res.clearCookie('auth_token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: COOKIE_SAMESITE,
+    });
+    res.json({ msg: 'Logged out successfully' });
+});
+
 // @route   POST /api/auth/forgot-password
 // @desc    Generate OTP and prepare for password reset
 app.post('/api/auth/forgot-password',
@@ -401,6 +436,7 @@ app.post('/api/auth/forgot-password',
         const { email } = req.body;
 
         try {
+            ensureEmailConfigured();
             const user = await User.findOne({ email });
             // Don't reveal whether user exists for security
             if (!user) {
@@ -416,24 +452,23 @@ app.post('/api/auth/forgot-password',
 
             const resetToken = new PasswordReset({
                 userId: user._id,
-                otp,
+                otpHash: await bcrypt.hash(otp, 10),
                 expiresAt
             });
             await resetToken.save();
 
-            // In production, you would send this via email
-            // For now, we log it (in production, NEVER log the OTP)
-            console.log(`\n🔐 PASSWORD RESET OTP for ${email}: ${otp}\n`);
-            console.log('⚠️  In production, this would be sent via email');
+            try {
+                await sendPasswordResetEmail(email, otp);
+            } catch (emailError) {
+                console.error('Failed to send password reset email:', emailError);
+            }
 
             res.json({
                 msg: 'If an account exists for this email, a reset code has been generated.',
-                // IMPORTANT: Remove this in production! Just for testing:
-                _devOtp: process.env.NODE_ENV === 'development' ? otp : undefined
             });
         } catch (error) {
             console.error('Forgot password error:', error);
-            res.status(500).json({ msg: 'Server error during password reset request' });
+            res.status(503).json({ msg: 'Password reset service is temporarily unavailable.' });
         }
     }
 );
@@ -462,12 +497,15 @@ app.post('/api/auth/reset-password',
 
             const resetToken = await PasswordReset.findOne({
                 userId: user._id,
-                otp,
                 used: false,
                 expiresAt: { $gt: new Date() }
             });
 
             if (!resetToken) {
+                return res.status(400).json({ msg: 'Invalid or expired OTP' });
+            }
+            const otpMatches = await bcrypt.compare(otp, (resetToken as any).otpHash);
+            if (!otpMatches) {
                 return res.status(400).json({ msg: 'Invalid or expired OTP' });
             }
 
@@ -501,9 +539,16 @@ app.post('/api/auth/reset-password',
 app.post('/api/documents', auth, async (req: AuthRequest, res: Response) => { // Use Response type
     try {
         const body = req.body as any;
+        const isDataUrl = (value?: string) =>
+            typeof value === 'string' && value.trim().toLowerCase().startsWith('data:');
+        if (body.sourcePdfDataUrl || isDataUrl(body.sourcePdfUrl) || isDataUrl(body.sourceImageUrl)) {
+            return res.status(400).json({ msg: 'Base64 file payloads are not supported. Upload to object storage and send URLs only.' });
+        }
         // Normalize incoming payload to match schema
         const documentData = {
             fileName: body.fileName,
+            sourcePdfUrl: body.sourcePdfUrl,
+            sourceImageUrl: body.sourceImageUrl,
             pdfPages: body.pdfPages || body.pages || [],
             chunkSummaries: body.chunkSummaries || body.summaries || [],
             notebookSummary: body.notebookSummary || body.notebookContent || '',
@@ -535,6 +580,20 @@ app.get('/api/documents', auth, async (req: AuthRequest, res: Response) => { // 
     try {
         const documents = await DocumentModel.find({ userId: req.user!.id }).sort({ createdAt: -1 });
         res.json(documents);
+    } catch (error) {
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   GET /api/documents/:id
+// @desc    Get a single document by ID for the logged-in user
+app.get('/api/documents/:id', auth, async (req: AuthRequest, res: Response) => {
+    try {
+        const document = await DocumentModel.findOne({ _id: req.params.id, userId: req.user!.id });
+        if (!document) {
+            return res.status(404).json({ msg: 'Document not found or user not authorized' });
+        }
+        res.json(document);
     } catch (error) {
         res.status(500).send('Server Error');
     }
@@ -816,7 +875,7 @@ app.get('/api/activities', auth, async (req: AuthRequest, res: Response) => {
 // ======================================
 
 // @route   POST /api/ai/process-file
-// @desc    Process a PDF or image file and generate summaries with doodles
+// @desc    Upload a file and enqueue AI processing job
 app.post('/api/ai/process-file', auth, upload.single('file'), async (req: AuthRequest, res: Response) => {
     try {
         if (!req.file) {
@@ -826,65 +885,70 @@ app.post('/api/ai/process-file', auth, upload.single('file'), async (req: AuthRe
         const file = req.file;
         const fileName = file.originalname;
         const fileType = file.mimetype;
-
-        // Progress tracking (simplified - in production you'd use WebSockets or SSE)
-        const sendProgress = (message: string) => {
-            console.log(`[${fileName}] ${message}`);
+        const filePath = file.path;
+        let cleaned = false;
+        const cleanupTempFile = async () => {
+            if (cleaned) return;
+            cleaned = true;
+            await fs.promises.unlink(filePath).catch(() => null);
         };
 
-        sendProgress('Step 1/6: Processing file...');
+        try {
+            ensureStorageConfigured();
+        } catch (storageError) {
+            await cleanupTempFile();
+            return res.status(503).json({ msg: 'File processing storage is unavailable.' });
+        }
 
-        let pages;
-        let sourcePdfDataUrl: string | undefined;
-        if (fileType === 'application/pdf') {
-            pages = await processPdf(file.buffer);
-            sourcePdfDataUrl = `data:application/pdf;base64,${file.buffer.toString('base64')}`;
-        } else if (fileType.startsWith('image/')) {
-            pages = await processImage(file.buffer, fileType);
-        } else {
+        if (fileType !== 'application/pdf' && !fileType.startsWith('image/')) {
+            await cleanupTempFile();
             return res.status(400).json({ msg: 'Unsupported file type. Please upload a PDF or image.' });
         }
 
-        if (!pages || pages.length === 0) {
-            return res.status(400).json({ msg: 'Could not extract content from the file.' });
+        const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const fileKey = `uploads/${req.user!.id}/${Date.now()}-${crypto.randomUUID()}-${safeName}`;
+        let fileUrl = '';
+        try {
+            const fileStream = fs.createReadStream(filePath);
+            fileUrl = await uploadStream(fileKey, fileStream, fileType);
+        } finally {
+            await cleanupTempFile();
         }
 
-        // Generate summaries and doodles
-        const summaries = await generateDoodleSummary(pages, sendProgress);
-
-        sendProgress('Step 4/6: Creating notebook view...');
-        const notebookContent = await generateNotebookSummary(summaries);
-
-        sendProgress('Step 5/6: Generating final summary...');
-        const totalSummary = await generateTotalSummary(summaries);
-
-        sendProgress('Step 6/6: Creating mini-exercise...');
-        const miniExercise = await generateMiniExercise(summaries);
-
-        // Create the document object aligned with schema
-        const documentData = {
-            fileName,
-            sourcePdfDataUrl,
-            pdfPages: pages,
-            chunkSummaries: summaries,
-            notebookSummary: notebookContent,
-            totalSummary,
-            miniExercise,
-            userNotes: [],
+        const job = new ProcessingJob({
             userId: req.user!.id,
-            createdAt: new Date()
-        };
+            fileName,
+            fileType,
+            fileKey,
+            fileUrl,
+            status: 'queued',
+            progressMessage: 'Queued for processing',
+        });
+        await job.save();
 
-        // Save to database
-        const newDocument = new DocumentModel(documentData);
-        const savedDocument = await newDocument.save();
-
-        await logActivity(req.user!.id, 'summarizer', `Summarized the document: ${fileName}`);
-
-        res.status(201).json(savedDocument);
+        res.status(202).json({ jobId: job._id });
     } catch (error) {
-        console.error('Error processing file:', error);
-        res.status(500).json({ msg: 'Failed to process file', error: String(error) });
+        console.error('Error enqueueing file processing:', error);
+        res.status(500).json({ msg: 'Failed to enqueue file processing', error: String(error) });
+    }
+});
+
+// @route   GET /api/ai/jobs/:id
+// @desc    Fetch AI processing job status
+app.get('/api/ai/jobs/:id', auth, async (req: AuthRequest, res: Response) => {
+    try {
+        const job = await ProcessingJob.findOne({ _id: req.params.id, userId: req.user!.id });
+        if (!job) return res.status(404).json({ msg: 'Job not found' });
+        res.json({
+            id: job._id,
+            status: job.status,
+            progressMessage: job.progressMessage,
+            error: job.error,
+            documentId: job.documentId,
+        });
+    } catch (error) {
+        console.error('Error fetching job status:', error);
+        res.status(500).json({ msg: 'Failed to fetch job status' });
     }
 });
 
@@ -898,14 +962,20 @@ app.post('/api/ai/storyfy', auth, upload.single('file'), async (req: AuthRequest
 
         const file = req.file;
         const fileType = file.mimetype;
+        const filePath = file.path;
 
         let pages;
-        if (fileType === 'application/pdf') {
-            pages = await processPdf(file.buffer);
-        } else if (fileType.startsWith('image/')) {
-            pages = await processImage(file.buffer, fileType);
-        } else {
-            return res.status(400).json({ msg: 'Unsupported file type' });
+        try {
+            const fileBuffer = await fs.promises.readFile(filePath);
+            if (fileType === 'application/pdf') {
+                pages = await processPdf(fileBuffer);
+            } else if (fileType.startsWith('image/')) {
+                pages = await processImage(fileBuffer, fileType);
+            } else {
+                return res.status(400).json({ msg: 'Unsupported file type' });
+            }
+        } finally {
+            fs.promises.unlink(filePath).catch(() => null);
         }
 
         const fullText = pages.map(p => p.text).join('\n\n');
@@ -1054,4 +1124,5 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
 });
 
 // --- SERVER INITIALIZATION ---
+startJobWorker();
 app.listen(PORT, () => console.log(`🚀 Backend server running on http://localhost:${PORT}`));

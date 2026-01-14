@@ -3,12 +3,11 @@ import { Document, PdfPage, ChunkSummary, UserNote } from '../types';
 import { DoodleIcon } from './icons/DoodleIcon';
 import { NotebookIcon } from './icons/NotebookIcon';
 import { DownloadIcon } from './icons/DownloadIcon';
-import { ShareIcon } from './icons/ShareIcon';
 import { SpinnerIcon } from './icons/SpinnerIcon';
 import { AddNoteIcon } from './icons/AddNoteIcon';
 import UserNoteItem from './UserNoteItem';
-import ShareModal from './ShareModal';
 import Draggable from './Draggable';
+import { sanitizeHtml } from '../utils/sanitizeHtml';
 
 // CDN-loaded library, declare for TypeScript
 declare const marked: any;
@@ -174,8 +173,8 @@ const DraggablePage: React.FC<{
 
 const TotalSummaryPage: React.FC<{ content: string }> = ({ content }) => {
     const htmlContent = useMemo(() => {
-        if (typeof marked === 'undefined') return content;
-        return marked.parse(content);
+        if (typeof marked === 'undefined') return sanitizeHtml(content);
+        return sanitizeHtml(marked.parse(content));
     }, [content]);
 
     return (
@@ -198,14 +197,14 @@ const Exercise: React.FC<{ content: string, index: number }> = ({ content, index
     const questionHtml = useMemo(() => {
         if (typeof marked === 'undefined' || !questionPart) return '';
         // Re-add the question number, which was removed during the split
-        return marked.parse(`**Q${index}:** ${questionPart}`);
+        return sanitizeHtml(marked.parse(`**Q${index}:** ${questionPart}`));
     }, [questionPart, index]);
 
     const answerHtml = useMemo(() => {
         if (typeof marked === 'undefined' || !answerPart) return '';
         // Embolden the answer label (A1, A2, etc.)
         const answerWithLabel = answerPart.replace(`A${index}:`, `**A${index}:**`);
-        return marked.parse(answerWithLabel);
+        return sanitizeHtml(marked.parse(answerWithLabel));
     }, [answerPart, index]);
 
     return (
@@ -237,7 +236,7 @@ const MiniExercisePage: React.FC<{ content: string }> = ({ content }) => {
 
     const titleHtml = useMemo(() => {
         if (typeof marked === 'undefined') return '';
-        return marked.parse(title);
+        return sanitizeHtml(marked.parse(title));
     }, [title]);
 
     return (
@@ -273,7 +272,6 @@ const ResultsView: React.FC<ResultsViewProps> = ({ document, onUpdateDocument, o
     const [isDownloading, setIsDownloading] = useState(false);
     const [downloadProgress, setDownloadProgress] = useState('');
     const [showDownloadOptions, setShowDownloadOptions] = useState(false);
-    const [showShareModal, setShowShareModal] = useState(false);
     const downloadMenuRef = useRef<HTMLDivElement>(null);
     
     const { pdfPages, chunkSummaries, totalSummary, miniExercise, userNotes } = document;
@@ -474,7 +472,6 @@ const ResultsView: React.FC<ResultsViewProps> = ({ document, onUpdateDocument, o
     return (
         <div className="w-full max-w-5xl mx-auto flex flex-col items-stretch">
             {isDownloading && <DownloadOverlay progress={downloadProgress} />}
-            {showShareModal && <ShareModal documentId={document.id} onClose={() => setShowShareModal(false)} />}
             {/* Header and Reset Button */}
             <div className="flex-shrink-0 flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 px-1">
                  <div className="flex flex-col items-center sm:items-start">
@@ -515,14 +512,6 @@ const ResultsView: React.FC<ResultsViewProps> = ({ document, onUpdateDocument, o
                     </div>
 
                     <button
-                        onClick={() => setShowShareModal(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-700 text-black dark:text-white border border-gray-300 dark:border-gray-600 text-sm font-semibold rounded-md shadow-sm hover:bg-gray-100 dark:hover:bg-gray-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 transition-colors"
-                    >
-                        <ShareIcon className="w-4 h-4" />
-                        Share
-                    </button>
-                    
-                    <button
                         onClick={onReset}
                         className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-md shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 transition-colors"
                     >
@@ -545,7 +534,7 @@ const ResultsView: React.FC<ResultsViewProps> = ({ document, onUpdateDocument, o
                         layouts={aiLayouts}
                         pageCount={pdfPages.length}
                         onDoodleDoubleClick={(url) => setFocusedDoodleUrl(url)}
-                        pdfDataUrl={(document as any).sourcePdfDataUrl}
+                        pdfDataUrl={document.sourcePdfUrl}
                     />
                 ))}
                 {totalSummary && <TotalSummaryPage content={totalSummary} />}

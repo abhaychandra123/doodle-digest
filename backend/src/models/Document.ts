@@ -24,8 +24,9 @@ const userNoteSchema = new Schema({
 const documentSchema = new Schema({
   fileName: { type: String, required: true },
   createdAt: { type: Date, default: Date.now },
-  // Optional original PDF as data URL for client-side rendering
-  sourcePdfDataUrl: { type: String },
+  // Optional original file URLs for client-side rendering
+  sourcePdfUrl: { type: String },
+  sourceImageUrl: { type: String },
   pdfPages: [pdfPageSchema],
   chunkSummaries: [chunkSummarySchema],
   notebookSummary: { type: String },

@@ -73,7 +73,8 @@ export interface Skill {
 }
 
 export interface User {
-    id: string;
+    id?: string;
+    _id?: string;
     email: string;
     password?: string;
     fullName?: string;
@@ -108,7 +109,8 @@ export interface Document {
     id: string;
     fileName: string;
     createdAt: Date;
-    sourcePdfDataUrl?: string; // optional, for client-side PDF rendering
+    sourcePdfUrl?: string; // optional, for client-side PDF rendering
+    sourceImageUrl?: string; // optional, for image-based documents
     pdfPages: PdfPage[];
     chunkSummaries: ChunkSummary[];
     notebookSummary: string;

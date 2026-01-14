@@ -52,59 +52,52 @@ const App: React.FC = () => {
   // Auth State
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [passwordResetEmail, setPasswordResetEmail] = useState<string | null>(null);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
+  const getTaskId = useCallback((task: Task) => (task as any)._id || task.id, []);
 
-  // Helper to get auth token
-  const getAuthToken = useCallback(() => localStorage.getItem('token'), []);
-
-  // Fetch initial data on app load if token exists
+  // Fetch initial data on app load using cookie-based auth
   useEffect(() => {
-    const token = getAuthToken();
-    if (token) {
-      const fetchInitialData = async () => {
-        try {
-          const userRes = await fetch(`${API_URL}/auth/user`, {
-            headers: { 'x-auth-token': token }
-          });
-          if (!userRes.ok) throw new Error('Invalid token');
-          const userData = await userRes.json();
-          setCurrentUser(userData);
-          setView(AppView.DASHBOARD);
+    const fetchInitialData = async () => {
+      try {
+        const userRes = await fetch(`${API_URL}/auth/user`, { credentials: 'include' });
+        if (!userRes.ok) throw new Error('Unauthenticated');
+        const userData = await userRes.json();
+        setCurrentUser(userData);
+        setView(AppView.DASHBOARD);
 
-          await Promise.all([
-            fetch(`${API_URL}/documents`, { headers: { 'x-auth-token': token } })
-              .then(res => res.ok ? res.json() : [])
-              .then(docsData => setDocuments(docsData)),
-            fetch(`${API_URL}/writing`, { headers: { 'x-auth-token': token } })
-              .then(res => res.ok ? res.json() : [])
-              .then(writingDocsData => setWritingDocuments(writingDocsData)),
-            fetch(`${API_URL}/tasks`, { headers: { 'x-auth-token': token } })
-              .then(res => res.ok ? res.json() : [])
-              .then(tasksData => setTasks(tasksData)),
-            fetch(`${API_URL}/activities`, { headers: { 'x-auth-token': token } })
-              .then(res => res.ok ? res.json() : [])
-              .then(activitiesData => setActivities(activitiesData)),
-            fetch(`${API_URL}/stats`, { headers: { 'x-auth-token': token } })
-              .then(res => res.ok ? res.json() : null)
-              .then(statsData => setStats(statsData))
-          ]);
+        await Promise.all([
+          fetch(`${API_URL}/documents`, { credentials: 'include' })
+            .then(res => res.ok ? res.json() : [])
+            .then(docsData => setDocuments(docsData)),
+          fetch(`${API_URL}/writing`, { credentials: 'include' })
+            .then(res => res.ok ? res.json() : [])
+            .then(writingDocsData => setWritingDocuments(writingDocsData)),
+          fetch(`${API_URL}/tasks`, { credentials: 'include' })
+            .then(res => res.ok ? res.json() : [])
+            .then(tasksData => setTasks(tasksData)),
+          fetch(`${API_URL}/activities`, { credentials: 'include' })
+            .then(res => res.ok ? res.json() : [])
+            .then(activitiesData => setActivities(activitiesData)),
+          fetch(`${API_URL}/stats`, { credentials: 'include' })
+            .then(res => res.ok ? res.json() : null)
+            .then(statsData => setStats(statsData))
+        ]);
 
-        } catch (error) {
-          console.error("Failed to fetch initial data:", error);
-          localStorage.removeItem('token');
-          setCurrentUser(null);
-          setDocuments([]);
-          setWritingDocuments([]);
-          setTasks([]);
-          setActivities([]);
-          setStats(null);
-          setView(AppView.LOGIN);
-        }
-      };
-      fetchInitialData();
-    } else {
-      setView(AppView.LOGIN);
-    }
-  }, [getAuthToken]);
+      } catch (error) {
+        console.error("Failed to fetch initial data:", error);
+        setCurrentUser(null);
+        setDocuments([]);
+        setWritingDocuments([]);
+        setTasks([]);
+        setActivities([]);
+        setStats(null);
+        setView(AppView.LOGIN);
+      } finally {
+        setIsAuthChecking(false);
+      }
+    };
+    fetchInitialData();
+  }, []);
 
 
   // --- Auth Handlers ---
@@ -115,16 +108,13 @@ const App: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fullName, email, password }),
+        credentials: 'include',
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.msg || 'Registration failed');
 
-      localStorage.setItem('token', data.token);
-
-      const fullUserRes = await fetch(`${API_URL}/auth/user`, { headers: { 'x-auth-token': data.token } });
-      if (!fullUserRes.ok) throw new Error('Failed to fetch user data after registration');
-      const fullUserData = await fullUserRes.json();
-      setCurrentUser(fullUserData);
+      if (!data.user) throw new Error('Failed to fetch user data after registration');
+      setCurrentUser(data.user);
 
       setDocuments([]);
       setWritingDocuments([]);
@@ -147,20 +137,18 @@ const App: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
+        credentials: 'include',
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.msg || 'Login failed');
 
-      localStorage.setItem('token', data.token);
-      const token = data.token;
-
       const [userRes, docsRes, writingDocsRes, tasksRes, activitiesRes, statsRes] = await Promise.all([
-        fetch(`${API_URL}/auth/user`, { headers: { 'x-auth-token': token } }),
-        fetch(`${API_URL}/documents`, { headers: { 'x-auth-token': token } }),
-        fetch(`${API_URL}/writing`, { headers: { 'x-auth-token': token } }),
-        fetch(`${API_URL}/tasks`, { headers: { 'x-auth-token': token } }),
-        fetch(`${API_URL}/activities`, { headers: { 'x-auth-token': token } }),
-        fetch(`${API_URL}/stats`, { headers: { 'x-auth-token': token } })
+        fetch(`${API_URL}/auth/user`, { credentials: 'include' }),
+        fetch(`${API_URL}/documents`, { credentials: 'include' }),
+        fetch(`${API_URL}/writing`, { credentials: 'include' }),
+        fetch(`${API_URL}/tasks`, { credentials: 'include' }),
+        fetch(`${API_URL}/activities`, { credentials: 'include' }),
+        fetch(`${API_URL}/stats`, { credentials: 'include' })
       ]);
 
       if (!userRes.ok) throw new Error('Failed to fetch user data after login');
@@ -190,6 +178,7 @@ const App: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
+        credentials: 'include',
       });
       const data = await res.json();
 
@@ -212,6 +201,7 @@ const App: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: passwordResetEmail, otp, newPassword }),
+        credentials: 'include',
       });
       const data = await res.json();
 
@@ -226,8 +216,12 @@ const App: React.FC = () => {
     }
   }, [passwordResetEmail]);
 
-  const handleLogout = useCallback(() => {
-    localStorage.removeItem('token');
+  const handleLogout = useCallback(async () => {
+    try {
+      await fetch(`${API_URL}/auth/logout`, { method: 'POST', credentials: 'include' });
+    } catch (error) {
+      console.warn('Logout request failed:', error);
+    }
     setCurrentUser(null);
     setPasswordResetEmail(null);
     setDocuments([]);
@@ -244,14 +238,13 @@ const App: React.FC = () => {
   const handleProfileCreate = useCallback(async (fullName: string, status: string) => {
     setError('');
     if (!currentUser) return;
-    const token = getAuthToken();
-    if (!token) return handleLogout();
 
     try {
       const res = await fetch(`${API_URL}/profile`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fullName, status }),
+        credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to update profile');
       const updatedUser = await res.json();
@@ -259,7 +252,7 @@ const App: React.FC = () => {
       setView(AppView.DASHBOARD);
       setActivities(prev => [{
         _id: `activity-${Date.now()}`,
-        userId: currentUser.id,
+        userId: (currentUser as any).id || (currentUser as any)._id,
         icon: 'profile',
         text: 'Profile created!',
         createdAt: new Date().toISOString()
@@ -267,13 +260,11 @@ const App: React.FC = () => {
     } catch (err: any) {
       setError(err.message);
     }
-  }, [currentUser, getAuthToken, handleLogout]);
+  }, [currentUser]);
 
   const handleUpdateProfile = useCallback(async (updatedUserData: Partial<User>) => {
     setError('');
     if (!currentUser) return;
-    const token = getAuthToken();
-    if (!token) return handleLogout();
 
     const previousUser = currentUser;
     setCurrentUser(prev => ({ ...prev!, ...updatedUserData }));
@@ -281,12 +272,13 @@ const App: React.FC = () => {
     try {
       const res = await fetch(`${API_URL}/profile`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fullName: updatedUserData.fullName,
           status: updatedUserData.status,
           integrations: updatedUserData.integrations
         }),
+        credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to update profile');
       const finalUser = await res.json();
@@ -295,7 +287,7 @@ const App: React.FC = () => {
       setError(err.message);
       setCurrentUser(previousUser);
     }
-  }, [currentUser, getAuthToken, handleLogout]);
+  }, [currentUser]);
 
   // --- Navigation Handlers ---
   const handleStartNew = useCallback(() => {
@@ -340,14 +332,19 @@ const App: React.FC = () => {
   // --- Onboarding Handler ---
   const handleOnboardingComplete = useCallback(async (groupDraft: GroupDraft) => {
     setError('');
-    const token = getAuthToken();
-    if (!token) return handleLogout();
+    if (!currentUser) return;
 
     try {
+      const normalizedMembers = groupDraft.members.map(member => ({
+        userId: (currentUser as any).id || (currentUser as any)._id,
+        name: member.name,
+        role: member.role
+      }));
       const res = await fetch(`${API_URL}/groups`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
-        body: JSON.stringify(groupDraft),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...groupDraft, members: normalizedMembers }),
+        credentials: 'include',
       });
       if (!res.ok) {
         const errorData = await res.json();
@@ -369,13 +366,11 @@ const App: React.FC = () => {
     } catch (err: any) {
       setError("Could not create the group: " + err.message);
     }
-  }, [getAuthToken, handleLogout]);
+  }, [currentUser]);
 
   // --- Document Note Update Handler ---
   const handleUpdateDocument = useCallback(async (updatedDoc: Document) => {
     setError('');
-    const token = getAuthToken();
-    if (!token) return handleLogout();
     const docId = (updatedDoc as any)._id || updatedDoc.id;
 
     if (!docId) {
@@ -390,8 +385,9 @@ const App: React.FC = () => {
     try {
       const res = await fetch(`${API_URL}/documents/${docId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userNotes: updatedDoc.userNotes }),
+        credentials: 'include',
       });
 
       if (!res.ok) {
@@ -403,18 +399,17 @@ const App: React.FC = () => {
       setDocuments(previousDocuments);
       setActiveDocument(previousDocuments.find(d => ((d as any)._id || d.id) === docId) || null);
     }
-  }, [documents, getAuthToken, handleLogout]);
+  }, [documents]);
 
   // --- Writing Wizard Handlers ---
   const handleCreateWritingDocument = useCallback(async () => {
     setError('');
-    const token = getAuthToken();
-    if (!token) return handleLogout();
     try {
       const res = await fetch(`${API_URL}/writing`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
-        body: JSON.stringify({ title: 'Untitled Document' })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'Untitled Document' }),
+        credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to create document');
       const newDoc = await res.json();
@@ -434,12 +429,10 @@ const App: React.FC = () => {
     } catch (err: any) {
       setError(err.message);
     }
-  }, [getAuthToken, handleLogout]);
+  }, []);
 
   const handleUpdateWritingDocument = useCallback(async (updatedDocData: Partial<WritingDocument> & { id: string }) => {
     setError('');
-    const token = getAuthToken();
-    if (!token) return handleLogout();
     const docId = updatedDocData.id;
     if (!docId) {
       setError("Cannot update writing document without ID.");
@@ -457,20 +450,19 @@ const App: React.FC = () => {
     try {
       const res = await fetch(`${API_URL}/writing/${docId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
-        body: JSON.stringify({ title: updatedDoc.title, content: updatedDoc.content })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: updatedDoc.title, content: updatedDoc.content }),
+        credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to update document');
     } catch (err: any) {
       setError(err.message);
       setWritingDocuments(previousWritingDocs);
     }
-  }, [writingDocuments, getAuthToken, handleLogout]);
+  }, [writingDocuments]);
 
   const handleDeleteWritingDocument = useCallback(async (id: string) => {
     setError('');
-    const token = getAuthToken();
-    if (!token) return handleLogout();
 
     const previousWritingDocs = writingDocuments;
     setWritingDocuments(prev => prev.filter(d => (d as any)._id !== id));
@@ -481,7 +473,7 @@ const App: React.FC = () => {
     try {
       const res = await fetch(`${API_URL}/writing/${id}`, {
         method: 'DELETE',
-        headers: { 'x-auth-token': token }
+        credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to delete document');
     } catch (err: any) {
@@ -491,7 +483,7 @@ const App: React.FC = () => {
         setActiveWritingDocumentId(id);
       }
     }
-  }, [activeWritingDocumentId, writingDocuments, getAuthToken, handleLogout]);
+  }, [activeWritingDocumentId, writingDocuments]);
 
 
   // --- NEW: Refactored Core Processing Logic ---
@@ -524,12 +516,9 @@ const App: React.FC = () => {
       ]);
 
       // Refresh stats
-      const token = getAuthToken();
-      if (token) {
-        fetch(`${API_URL}/stats`, { headers: { 'x-auth-token': token } })
-          .then(res => res.ok ? res.json() : null)
-          .then(statsData => setStats(statsData));
-      }
+      fetch(`${API_URL}/stats`, { credentials: 'include' })
+        .then(res => res.ok ? res.json() : null)
+        .then(statsData => setStats(statsData));
 
     } catch (err: any) {
       console.error("File Processing Error:", err);
@@ -538,7 +527,7 @@ const App: React.FC = () => {
     } finally {
       setProcessingMessage('');
     }
-  }, [getAuthToken]); // Removed handleLogout dependency, it's called internally
+  }, []); // Removed handleLogout dependency, it's called internally
 
   // --- NEW: Refactored Storyfy Logic ---
   const handleGenerateStory = useCallback(async (file: File) => {
@@ -582,16 +571,16 @@ const App: React.FC = () => {
 
   // --- TASK HANDLERS (Unchanged) ---
   const handleAddTask = useCallback(async (text: string) => {
-    const token = getAuthToken();
-    if (!token || !text.trim()) return;
+    if (!text.trim()) return;
     const tempId = `task-${Date.now()}`;
     const newTask: Task = { id: tempId, text: text.trim(), completed: false };
     setTasks(prevTasks => [...prevTasks, newTask]);
     try {
       const res = await fetch(`${API_URL}/tasks`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: text.trim() }),
+        credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to save task');
       const savedTask = await res.json();
@@ -601,21 +590,20 @@ const App: React.FC = () => {
       setError("Failed to save new task.");
       setTasks(prevTasks => prevTasks.filter(t => t.id !== tempId));
     }
-  }, [getAuthToken]);
+  }, []);
 
   const handleToggleTask = useCallback(async (taskId: string) => {
-    const token = getAuthToken();
-    if (!token) return;
-    const task = tasks.find(t => (t as any)._id === taskId);
+    const task = tasks.find(t => getTaskId(t) === taskId);
     if (!task) return;
     const updatedTask = { ...task, completed: !task.completed };
     const previousTasks = tasks;
-    setTasks(prevTasks => prevTasks.map(t => (t as any)._id === taskId ? updatedTask : t));
+    setTasks(prevTasks => prevTasks.map(t => getTaskId(t) === taskId ? updatedTask : t));
     try {
       const res = await fetch(`${API_URL}/tasks/${taskId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ completed: updatedTask.completed }),
+        credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to update task');
       if (updatedTask.completed) {
@@ -629,7 +617,7 @@ const App: React.FC = () => {
           },
           ...prev
         ]);
-        fetch(`${API_URL}/stats`, { headers: { 'x-auth-token': token } })
+        fetch(`${API_URL}/stats`, { credentials: 'include' })
           .then(res => res.ok ? res.json() : null)
           .then(statsData => setStats(statsData));
       }
@@ -638,17 +626,15 @@ const App: React.FC = () => {
       setError("Failed to update task.");
       setTasks(previousTasks);
     }
-  }, [tasks, getAuthToken]);
+  }, [tasks, getTaskId]);
 
   const handleDeleteTask = useCallback(async (taskId: string) => {
-    const token = getAuthToken();
-    if (!token) return;
     const previousTasks = tasks;
-    setTasks(prevTasks => prevTasks.filter(t => (t as any)._id !== taskId));
+    setTasks(prevTasks => prevTasks.filter(t => getTaskId(t) !== taskId));
     try {
       const res = await fetch(`${API_URL}/tasks/${taskId}`, {
         method: 'DELETE',
-        headers: { 'x-auth-token': token },
+        credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to delete task');
     } catch (err) {
@@ -656,7 +642,7 @@ const App: React.FC = () => {
       setError("Failed to delete task.");
       setTasks(previousTasks);
     }
-  }, [getAuthToken, tasks]);
+  }, [tasks, getTaskId]);
 
 
   // --- RENDER LOGIC ---
@@ -698,7 +684,7 @@ const App: React.FC = () => {
   };
 
   const renderContent = () => {
-    if (view === AppView.LOGIN && getAuthToken() && currentUser === null) {
+    if (view === AppView.LOGIN && isAuthChecking) {
       return <div className="flex items-center justify-center h-screen"><ProcessingView message="Loading your dashboard..." /></div>;
     }
     switch (view) {
@@ -714,7 +700,7 @@ const App: React.FC = () => {
         return <CreateProfileView onProfileCreate={handleProfileCreate} />;
       case AppView.ONBOARDING:
         if (!currentUser) return <AuthView onRegister={handleRegister} onLogin={handleLogin} onForgotPassword={handleForgotPassword} onResetPassword={handleResetPassword} />;
-        return <OnboardingView onComplete={(groupDraft) => handleOnboardingComplete(groupDraft)} onExit={handleLogout} />;
+        return <OnboardingView onComplete={(groupDraft) => handleOnboardingComplete(groupDraft)} onExit={handleLogout} user={currentUser} />;
       case AppView.DASHBOARD:
         if (!currentUser) return <AuthView onRegister={handleRegister} onLogin={handleLogin} onForgotPassword={handleForgotPassword} onResetPassword={handleResetPassword} />;
         return <DashboardView

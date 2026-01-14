@@ -3,7 +3,6 @@ import { useOnboardingState } from './OnboardingView';
 import { Privacy, Member } from '../types';
 import { ChevronRightIcon } from './icons/ChevronRightIcon';
 import { ArrowLeftIcon } from './icons/ArrowLeftIcon';
-import { PlusIcon } from './icons/PlusIcon';
 
 interface OnboardingStepProps {
   nextStep: () => void;
@@ -101,10 +100,7 @@ const OnboardingStructure: React.FC<OnboardingStepProps> = ({ nextStep, prevStep
                     </tbody>
                 </table>
             </div>
-            <div className="mt-2 flex justify-between items-center text-sm">
-                 <button className="flex items-center gap-2 font-semibold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300">
-                    <PlusIcon className="w-4 h-4" /> Add Member
-                 </button>
+            <div className="mt-2 flex justify-end items-center text-sm">
                  <button onClick={() => setShowRolesModal(true)} className="font-semibold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 hover:underline">
                     Edit Roles and Permissions
                  </button>

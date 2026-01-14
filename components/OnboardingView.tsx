@@ -1,5 +1,5 @@
 import React, { useState, createContext, useContext } from 'react';
-import { GroupDraft } from '../types';
+import { GroupDraft, User } from '../types';
 import OnboardingCreateGroup from './OnboardingCreateGroup';
 import OnboardingPurpose from './OnboardingPurpose';
 import OnboardingStructure from './OnboardingStructure';
@@ -9,7 +9,6 @@ import OnboardingReview from './OnboardingReview';
 interface OnboardingContextType {
   groupDraft: GroupDraft;
   setGroupDraft: React.Dispatch<React.SetStateAction<GroupDraft>>;
-  user: { name: string; email: string };
 }
 
 const OnboardingContext = createContext<OnboardingContextType | null>(null);
@@ -21,34 +20,37 @@ export const useOnboardingState = () => {
   return context;
 };
 
-const initialDraft: GroupDraft = {
+const createInitialDraft = (user: User): GroupDraft => ({
   name: '',
   description: '',
   purpose: '',
   categories: [],
   privacy: 'Private',
   members: [
-    { id: 'user-1', name: 'You', role: 'Lead Researcher' },
-    { id: 'user-2', name: 'Jane Doe', role: 'Contributor' }
+    {
+      id: (user as any).id || (user as any)._id || 'current-user',
+      name: user.fullName || user.email || 'You',
+      role: 'Lead Researcher'
+    }
   ],
   tools: [],
   template: undefined,
-};
+});
 
 
 interface OnboardingViewProps {
-  onComplete: () => void;
+  onComplete: (groupDraft: GroupDraft) => void;
   onExit: () => void;
+  user: User;
 }
 
-const OnboardingView: React.FC<OnboardingViewProps> = ({ onComplete, onExit }) => {
+const OnboardingView: React.FC<OnboardingViewProps> = ({ onComplete, onExit, user }) => {
   const [step, setStep] = useState(1);
-  const [groupDraft, setGroupDraft] = useState<GroupDraft>(initialDraft);
+  const [groupDraft, setGroupDraft] = useState<GroupDraft>(() => createInitialDraft(user));
 
   const contextValue = {
     groupDraft,
     setGroupDraft,
-    user: { name: 'You', email: 'your-email@example.com' }, // Placeholder user
   };
 
   const nextStep = () => setStep(s => Math.min(s + 1, 5));

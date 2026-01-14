@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { UserNote } from '../types';
 import { TrashIcon } from './icons/TrashIcon';
 import Draggable from './Draggable';
+import { sanitizeHtml } from '../utils/sanitizeHtml';
 
 declare const marked: any;
 
@@ -40,8 +41,8 @@ const UserNoteItem: React.FC<UserNoteItemProps> = ({ note, parentRef, onUpdate, 
     };
 
     const parsedContent = useMemo(() => {
-        if (typeof marked === 'undefined') return note.content;
-        return marked.parse(note.content);
+        if (typeof marked === 'undefined') return sanitizeHtml(note.content);
+        return sanitizeHtml(marked.parse(note.content));
     }, [note.content]);
 
     return (

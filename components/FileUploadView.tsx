@@ -1,9 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { UploadIcon } from './icons/UploadIcon';
 import { CameraIcon } from './icons/CameraIcon';
-import { GoogleDriveIcon } from './icons/GoogleDriveIcon';
 import { ArrowLeftIcon } from './icons/ArrowLeftIcon';
-import GoogleDrivePicker from './GoogleDrivePicker';
 
 interface FileUploadViewProps {
   onFileUpload: (file: File) => void;
@@ -30,8 +28,6 @@ const InputOption: React.FC<{
 );
 
 const FileUploadView: React.FC<FileUploadViewProps> = ({ onFileUpload, onBack, onTakePhoto }) => {
-  const [showDrivePicker, setShowDrivePicker] = useState(false);
-  
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       onFileUpload(e.target.files[0]);
@@ -54,18 +50,18 @@ const FileUploadView: React.FC<FileUploadViewProps> = ({ onFileUpload, onBack, o
         Choose a method to import your paper and let our AI do the rest.
       </p>
       
-      <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6">
         <InputOption
           icon={<UploadIcon className="w-8 h-8 text-indigo-500" />}
           title="From Device"
-          description="Upload a PDF from your computer."
+          description="Upload a PDF or image from your computer."
           onClick={() => window.document.getElementById('file-upload')?.click()}
         >
           <input
             id="file-upload"
             name="file-upload"
             type="file"
-            accept=".pdf"
+            accept=".pdf,image/*"
             className="sr-only"
             onChange={handleFileChange}
           />
@@ -78,15 +74,7 @@ const FileUploadView: React.FC<FileUploadViewProps> = ({ onFileUpload, onBack, o
           onClick={onTakePhoto}
         />
 
-        <InputOption
-          icon={<GoogleDriveIcon className="w-8 h-8 text-amber-500" />}
-          title="From Google Drive"
-          description="Connect and import a file from your Drive."
-          onClick={() => setShowDrivePicker(true)}
-        />
       </div>
-
-      {showDrivePicker && <GoogleDrivePicker onClose={() => setShowDrivePicker(false)} />}
     </div>
   );
 };

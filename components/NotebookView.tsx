@@ -5,6 +5,7 @@ import { ArrowLeftIcon } from './icons/ArrowLeftIcon';
 import { RefreshIcon } from './icons/RefreshIcon';
 import { PencilIcon } from './icons/PencilIcon';
 import { Document } from '../types';
+import { sanitizeHtml } from '../utils/sanitizeHtml';
 
 // CDN-loaded library, declare for TypeScript
 declare const marked: any;
@@ -161,9 +162,9 @@ const NotebookView: React.FC<NotebookViewProps> = ({ document, onReset, onBack }
 
     const parsedHtml = (markdownText: string) => {
         if (typeof marked === 'undefined') {
-            return markdownText;
+            return sanitizeHtml(markdownText);
         }
-        return marked.parse(markdownText);
+        return sanitizeHtml(marked.parse(markdownText));
     };
 
     return (
